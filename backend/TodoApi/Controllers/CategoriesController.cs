@@ -30,20 +30,25 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    public record CreateCategoryRequest(string Name);
+    public record CreateCategoryRequest(string Name, decimal Budget = 0);
 
     [HttpPost]
     public async Task<ActionResult<Category>> Create(CreateCategoryRequest request)
     {
         if (CurrentUserId == null) return Unauthorized();
 
-        var category = Category.Create(request.Name, CurrentUserId);
+        if (request.Budget < 0)
+        {
+            return BadRequest("Budget cannot be negative.");
+        }
+
+        var category = Category.Create(request.Name, CurrentUserId, request.Budget);
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetAll), new { id = category.Id }, category);
     }
 
-    public record UpdateCategoryRequest(string Name);
+    public record UpdateCategoryRequest(string Name, decimal? Budget = null);
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateCategoryRequest request)
@@ -57,8 +62,17 @@ public class CategoriesController : ControllerBase
         {
             return BadRequest("Name cannot be empty.");
         }
+        if (request.Budget < 0)
+        {
+            return BadRequest("Budget cannot be negative.");
+        }
 
         category.Rename(request.Name);
+
+        if (request.Budget.HasValue && request.Budget.Value != category.Budget)
+        {
+            category.UpdateBudget(request.Budget.Value);
+        }
         await _context.SaveChangesAsync();
         return Ok(category);
     }

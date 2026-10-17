@@ -43,14 +43,19 @@ public class TodosController : ControllerBase
         return Ok(todo);
     }
 
-    public record CreateTodoRequest(string Title, int CategoryId);
+    public record CreateTodoRequest(string Title, int CategoryId, decimal EstimatedCost = 0);
 
     [HttpPost]
     public async Task<ActionResult<Todo>> Create(CreateTodoRequest request)
     {
         if (CurrentUserId == null) return Unauthorized();
 
-        var todo = Todo.Create(request.Title, request.CategoryId, CurrentUserId);
+        if (request.EstimatedCost < 0)
+        {
+            return BadRequest("Estimated cost cannot be negative.");
+        }
+
+        var todo = Todo.Create(request.Title, request.CategoryId, CurrentUserId, request.EstimatedCost);
         try
         {
             await _repository.AddAsync(todo);
@@ -64,7 +69,7 @@ public class TodosController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = todo.Id }, todo);
     }
 
-    public record UpdateTodoRequest(bool IsComplete, string? Title);
+    public record UpdateTodoRequest(bool IsComplete, string? Title, decimal? EstimatedCost = null);
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateTodoRequest request)
@@ -73,6 +78,11 @@ public class TodosController : ControllerBase
 
         var todo = await _repository.GetByIdAsync(id);
         if (todo == null || todo.UserId != CurrentUserId) return NotFound();
+
+        if (request.EstimatedCost < 0)
+        {
+            return BadRequest("Estimated cost cannot be negative.");
+        }
 
         if (request.IsComplete && !todo.IsComplete)
         {
@@ -86,6 +96,11 @@ public class TodosController : ControllerBase
         if (!string.IsNullOrWhiteSpace(request.Title) && request.Title != todo.Title)
         {
             todo.Rename(request.Title);
+        }
+
+        if (request.EstimatedCost.HasValue && request.EstimatedCost.Value != todo.EstimatedCost)
+        {
+            todo.UpdateEstimatedCost(request.EstimatedCost.Value);
         }
 
         await _repository.SaveChangesAsync();
