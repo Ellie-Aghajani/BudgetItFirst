@@ -65,20 +65,17 @@ function AuthScreen() {
         minHeight: "100vh",
         alignItems: "center",
         justifyContent: "center",
-        background: (t) =>
-          t.palette.mode === "light"
-            ? "linear-gradient(135deg, #edf7ff 0%, #f7f3ff 100%)"
-            : "linear-gradient(135deg, #071827 0%, #111827 100%)",
+        backgroundColor: "background.default",
       }}
     >
-      <Card sx={{ padding: 4, width: "100%", maxWidth: 420, boxShadow: 6 }}>
+      <Card sx={{ padding: 4, width: "100%", maxWidth: 420 }}>
         <Stack spacing={1} sx={{ marginBottom: 3 }}>
           <Typography
             variant="overline"
             color="primary"
             sx={{ letterSpacing: 1.2 }}
           >
-            My To Do List
+            Budget It First
           </Typography>
           <Typography
             variant="h1"
@@ -90,9 +87,9 @@ function AuthScreen() {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {mode === "signIn" &&
-              "Sign in to stay on top of your tasks and keep going."}
+              "Sign in to plan your shopping and stay on budget."}
             {mode === "signUp" &&
-              "Start organizing your day with a clean, focused space for your goals."}
+              "Set your budget first, then plan every purchase against it."}
             {mode === "resetPassword" &&
               "We’ll send you a reset link so you can get back into your account."}
           </Typography>

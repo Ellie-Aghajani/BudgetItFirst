@@ -6,7 +6,12 @@ public class Category : AuditableEntity
     public string Name { get; private set; } = string.Empty;
     public string UserId { get; private set; } = string.Empty;
     public decimal Budget { get; private set; }
+
+    // Soft delete: an archived category is hidden everywhere in the app, but
+    // the row stays so past months' items still have a category to point at.
+    public bool IsArchived { get; private set; }
     public ICollection<Todo> Todos { get; private set; } = new List<Todo>();
+    public ICollection<Expense> Expenses { get; private set; } = new List<Expense>();
 
     private Category() { }
 
@@ -35,6 +40,12 @@ public class Category : AuditableEntity
         if (newBudget < 0)
             throw new ArgumentException("Budget cannot be negative.", nameof(newBudget));
         Budget = newBudget;
+        Touch();
+    }
+
+    public void Archive()
+    {
+        IsArchived = true;
         Touch();
     }
 }

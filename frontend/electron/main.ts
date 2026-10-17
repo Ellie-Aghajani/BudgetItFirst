@@ -30,7 +30,7 @@ function getSavedBounds(): WindowBounds {
   return { width: 1000, height: 700 };
 }
 
-const APP_NAME = "Todo App";
+const APP_NAME = "Budget It First";
 
 app.setName(APP_NAME);
 

@@ -14,19 +14,36 @@ public class SpendingService : ISpendingService
         _context = context;
     }
 
-    public async Task<SpendingSummary> GetSummaryAsync(string userId)
+    public async Task<SpendingSummary> GetSummaryAsync(string userId, int year, int month)
     {
-        // The SUM runs in SQL Server, so only one row per category comes back
-        // instead of every todo. Every item counts toward "spent", checked off
-        // or not — a planned purchase still uses up the budget.
+        var report = await _context.MonthlyReports
+            .Include(r => r.Categories)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.UserId == userId && r.Year == year && r.Month == month);
+
+        if (report != null)
+        {
+            return Summarize(
+                report.MonthlyIncome,
+                report.Categories.Select(c => (c.CategoryId, c.CategoryName, c.Budget, c.Spent, 0m)));
+        }
+
+        // The SUMs run in SQL Server, so only one row per category comes back
+        // instead of every expense and item. Spent is what the user logged as
+        // actually paid; the shopping list's estimates are reported separately.
         var rows = await _context.Categories
-            .Where(c => c.UserId == userId)
+            .Where(c => c.UserId == userId && !c.IsArchived)
             .Select(c => new
             {
                 c.Id,
                 c.Name,
                 c.Budget,
-                Spent = c.Todos.Sum(t => (decimal?)t.EstimatedCost) ?? 0
+                Spent = c.Expenses
+                    .Where(e => e.BudgetYear == year && e.BudgetMonth == month)
+                    .Sum(e => (decimal?)e.Amount) ?? 0,
+                Estimated = c.Todos
+                    .Where(t => t.BudgetYear == year && t.BudgetMonth == month)
+                    .Sum(t => (decimal?)t.EstimatedCost) ?? 0
             })
             .AsNoTracking()
             .ToListAsync();
@@ -36,12 +53,20 @@ public class SpendingService : ISpendingService
             .Select(b => b.MonthlyIncome)
             .FirstOrDefaultAsync();
 
+        return Summarize(monthlyIncome, rows.Select(r => (r.Id, r.Name, r.Budget, r.Spent, r.Estimated)));
+    }
+
+    private static SpendingSummary Summarize(
+        decimal monthlyIncome,
+        IEnumerable<(int Id, string Name, decimal Budget, decimal Spent, decimal Estimated)> rows)
+    {
         var categories = rows
             .Select(r => new CategorySpending(
                 r.Id,
                 r.Name,
                 r.Budget,
                 r.Spent,
+                r.Estimated,
                 r.Budget - r.Spent,
                 PercentOf(r.Spent, r.Budget),
                 r.Spent > r.Budget))

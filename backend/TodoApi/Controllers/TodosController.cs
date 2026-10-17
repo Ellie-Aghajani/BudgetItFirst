@@ -23,13 +23,19 @@ public class TodosController : ControllerBase
     // Returns null if the request wasn't authenticated.
     private string? CurrentUserId => HttpContext.Items["UserId"] as string;
 
+    // With year/month, returns only that budget month's items (the shopping
+    // list for the month). Without them, returns everything.
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Todo>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Todo>>> GetAll([FromQuery] int? year, [FromQuery] int? month)
     {
         if (CurrentUserId == null) return Unauthorized();
 
         var todos = await _repository.GetAllAsync();
         var userTodos = todos.Where(t => t.UserId == CurrentUserId);
+        if (year.HasValue && month.HasValue)
+        {
+            userTodos = userTodos.Where(t => t.BudgetYear == year && t.BudgetMonth == month);
+        }
         return Ok(userTodos);
     }
 
@@ -43,7 +49,7 @@ public class TodosController : ControllerBase
         return Ok(todo);
     }
 
-    public record CreateTodoRequest(string Title, int CategoryId, decimal EstimatedCost = 0);
+    public record CreateTodoRequest(string Title, int CategoryId, int BudgetYear, int BudgetMonth, decimal EstimatedCost = 0);
 
     [HttpPost]
     public async Task<ActionResult<Todo>> Create(CreateTodoRequest request)
@@ -54,8 +60,18 @@ public class TodosController : ControllerBase
         {
             return BadRequest("Estimated cost cannot be negative.");
         }
+        if (!BudgetMonths.IsPlausibleCurrentMonth(request.BudgetYear, request.BudgetMonth))
+        {
+            return BadRequest("Items can only be added to the current month.");
+        }
 
-        var todo = Todo.Create(request.Title, request.CategoryId, CurrentUserId, request.EstimatedCost);
+        var todo = Todo.Create(
+            request.Title,
+            request.CategoryId,
+            CurrentUserId,
+            request.BudgetYear,
+            request.BudgetMonth,
+            request.EstimatedCost);
         try
         {
             await _repository.AddAsync(todo);
@@ -120,13 +136,19 @@ public class TodosController : ControllerBase
         return NoContent();
     }
 
+    // With year/month, clears only that month's list — past months' items
+    // aren't visible in the UI, so "Delete All" shouldn't silently remove them.
     [HttpDelete]
-    public async Task<IActionResult> DeleteAll()
+    public async Task<IActionResult> DeleteAll([FromQuery] int? year, [FromQuery] int? month)
     {
         if (CurrentUserId == null) return Unauthorized();
 
         var todos = await _repository.GetAllAsync();
         var userTodos = todos.Where(t => t.UserId == CurrentUserId);
+        if (year.HasValue && month.HasValue)
+        {
+            userTodos = userTodos.Where(t => t.BudgetYear == year && t.BudgetMonth == month);
+        }
         foreach (var todo in userTodos)
         {
             await _repository.DeleteAsync(todo.Id);

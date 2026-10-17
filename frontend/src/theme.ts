@@ -1,4 +1,4 @@
-import { createTheme } from "@mui/material/styles";
+import { alpha, createTheme } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
 
 declare module "@mui/material/styles" {
@@ -28,7 +28,25 @@ pink:     { light: "#FBD3DE", dark: "#965A6C" },
 
 export type CardColorName = keyof typeof cardColors;
 
+// Categorical chart colors, checked for colorblind-safe separation in both
+// modes. Assigned in this fixed order — never cycled. Categories past the
+// last slot fold into "Other".
+export const chartColors = {
+  series: {
+    light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"],
+    dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"],
+  },
+  other: { light: "#9a9994", dark: "#6e7f93" },
+} as const;
+
+// Plain constants rather than palette keys: they're only used by the
+// overrides below, so they don't need to be on the theme object.
+const SIDEBAR_BG = { light: "#0A2A4A", dark: "#071E36" };
+const SUBTLE_SURFACE = { light: "#F8FAFC", dark: "#132A44" };
+
 export function getTheme(mode: "light" | "dark") {
+  const isLight = mode === "light";
+
   return createTheme({
     breakpoints: {
       values: {
@@ -42,129 +60,208 @@ export function getTheme(mode: "light" | "dark") {
     palette: {
       mode,
       primary: {
-        main: "#0068ac",
+        main: "#21BFD4",
+        contrastText: "#FFFFFF",
       },
+      secondary: {
+        main: isLight ? "#004793" : "#5B9BE0",
+      },
+      success: { main: "#10B981" },
+      warning: { main: "#F59E0B" },
+      error: { main: "#EF4444" },
       background: {
-        default: mode === "light" ? "#cdeaf5" : "#040e1f",
-        paper: mode === "light" ? "#f7f4e7" : "#013365",
+        default: isLight ? "#F2F7FA" : "#0B1726",
+        paper: isLight ? "#FFFFFF" : "#10233A",
       },
       text: {
-        primary: mode === "light" ? "#041836" : "#f1f1f1",
-        secondary: mode === "light" ? "#5A5D66" : "#9CA3AF",
+        primary: isLight ? "#1E293B" : "#E2E8F0",
+        secondary: isLight ? "#6B7280" : "#94A3B8",
       },
+      divider: isLight ? "#E2E8F0" : "#1E3A5F",
       highlight: {
-        main: mode === "light" ? "#eff5f6" : "#254b6a",
+        main: isLight ? "#E6F7FA" : "#16324F",
       },
       stats: {
-        total: "#f59e0b",
-        completed: "#22c55e",
-        remaining: "#a855f7",
+        total: "#F59E0B",
+        completed: "#10B981",
+        remaining: "#21BFD4",
       },
     },
     shape: {
-      borderRadius: 12,
+      borderRadius: 8,
     },
     typography: {
       fontFamily: '"Inter", "Segoe UI", system-ui, sans-serif',
       h1: {
-        textTransform: "uppercase",
-        letterSpacing: "1.5px",
-        fontWeight: 500,
         fontSize: "2rem",
+        lineHeight: "2.5rem",
+        fontWeight: 700,
       },
       h2: {
-        textTransform: "uppercase",
-        letterSpacing: "1px",
+        fontSize: "1.5rem",
+        lineHeight: "2rem",
+        fontWeight: 600,
+      },
+      body1: {
+        fontSize: "1rem",
+        lineHeight: "1.5rem",
+        fontWeight: 400,
+      },
+      body2: {
+        fontSize: "0.875rem",
+        lineHeight: "1.25rem",
         fontWeight: 500,
-        fontSize: "1.25rem",
       },
       button: {
         textTransform: "none",
-        fontWeight: 500,
-        fontSize: "1rem",
-        "@media (max-width: 1535.95px)": {
-          fontSize: "0.95rem",
-        },
-        "@media (max-width: 1199.95px)": {
-          fontSize: "0.85rem",
-        },
-        "@media (max-width: 899.95px)": {
-          fontSize: "0.75rem",
-        },
-        "@media (max-width: 599.95px)": {
-          fontSize: "0.6rem",
-        },
+        fontWeight: 600,
       },
     },
     components: {
-      MuiButton: {
+      MuiPaper: {
+        defaultProps: {
+          elevation: 0,
+        },
+        // Only flat papers (cards, panels) get the border. Menus, popovers
+        // and dialogs pass their own elevation, so they keep their shadow.
+        variants: [
+          {
+            props: { variant: "elevation", elevation: 0 },
+            style: ({ theme }) => ({
+              border: `1px solid ${theme.palette.divider}`,
+            }),
+          },
+        ],
+      },
+      MuiCard: {
+        defaultProps: {
+          elevation: 0,
+        },
         styleOverrides: {
           root: {
-            borderRadius: 999,
-            paddingTop: 4,
-            paddingBottom: 4,
+            borderRadius: 12,
+          },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 16,
+          },
+        },
+      },
+      MuiButton: {
+        defaultProps: {
+          disableElevation: true,
+        },
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
             margin: 4,
-            boxShadow: "none",
-            "&:hover": {
-              boxShadow: "none",
-            },
           },
         },
         variants: [
           {
-            props: { variant: "contained", color: "primary" },
-            style: {
-              backgroundColor: "#0068ac",
-              color: "#ffffff",
+            props: { variant: "outlined" },
+            style: ({ theme }) => ({
+              borderColor: theme.palette.divider,
               "&:hover": {
-                backgroundColor: "#00568c",
-              },
-            },
-          },
-          {
-            props: { variant: "contained", color: "inherit" },
-            style: {
-              backgroundColor: mode === "light" ? "#ffffff" : "#0d2a45",
-              color: mode === "light" ? "#041836" : "#f1f1f1",
-              "&:hover": {
-                backgroundColor: mode === "light" ? "#bfe0ef" : "#123a5e",
-              },
-            },
-          },
-          {
-            props: { variant: "outlined", color: "primary" },
-            style: {
-              borderColor: "#0068ac",
-              color: "#0068ac",
-              backgroundColor: "#fff",
-              "&:hover": {
-                backgroundColor: mode === "light" ? "#eaf4fa" : "#0d2a45",
-                borderColor: "#00568c",
-              },
-            },
-          },
-          {
-            props: { variant: "outlined", color: "error" },
-            style: ({ theme }: { theme: Theme }) => ({
-              borderColor: theme.palette.error.main,
-              "&:hover": {
-                backgroundColor: mode === "light" ? "#fdecea" : "#3a1a1a",
+                borderColor: theme.palette.text.secondary,
               },
             }),
           },
         ],
       },
-      MuiOutlinedInput: {
+      MuiChip: {
         styleOverrides: {
           root: {
-            backgroundColor: mode === "light" ? "#ffffff" : "#0d1b2f",
+            borderRadius: 999,
           },
-          input: {
-            "&:-webkit-autofill": {
-              WebkitBoxShadow: `0 0 0 100px ${mode === "light" ? "#ffffff" : "#0d1b2f"} inset`,
-              WebkitTextFillColor: mode === "light" ? "#041836" : "#f1f1f1",
+        },
+        // Soft status pills: <Chip color="success|warning|error" />. Text uses
+        // the .dark shade: the main colors on a 12% tint are only 2-3:1
+        // contrast, below the 4.5:1 that small text needs.
+        variants: (["success", "warning", "error"] as const).map((color) => ({
+          props: { color, variant: "filled" as const },
+          style: ({ theme }: { theme: Theme }) => ({
+            backgroundColor: alpha(theme.palette[color].main, 0.12),
+            color: isLight ? theme.palette[color].dark : theme.palette[color].light,
+          }),
+        })),
+      },
+      MuiLinearProgress: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            height: 8,
+            borderRadius: 999,
+            backgroundColor: theme.palette.divider,
+          }),
+          bar: {
+            borderRadius: 999,
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            backgroundColor: theme.palette.background.paper,
+            borderRadius: 8,
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: theme.palette.divider,
             },
-          },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              borderColor: theme.palette.primary.main,
+            },
+          }),
+          input: ({ theme }) => ({
+            "&:-webkit-autofill": {
+              WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.paper} inset`,
+              WebkitTextFillColor: theme.palette.text.primary,
+            },
+          }),
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          head: ({ theme }) => ({
+            backgroundColor: SUBTLE_SURFACE[mode],
+            color: theme.palette.text.secondary,
+            fontSize: "0.875rem",
+            fontWeight: 500,
+          }),
+        },
+      },
+      MuiDrawer: {
+        styleOverrides: {
+          paper: ({ theme }) => ({
+            backgroundColor: SIDEBAR_BG[mode],
+            color: "#E2E8F0",
+            border: "none",
+            // MUI's defaults for these are dark greys meant for a white
+            // background, so on the navy sidebar they follow its light text.
+            "& .MuiListItemIcon-root, & .MuiIconButton-root": {
+              color: "inherit",
+            },
+            "& .MuiListItemText-secondary": {
+              color: "inherit",
+              opacity: 0.7,
+            },
+            "& .MuiChip-root": {
+              color: "inherit",
+              backgroundColor: alpha("#FFFFFF", 0.12),
+            },
+            "& .MuiDivider-root": {
+              borderColor: alpha("#FFFFFF", 0.12),
+            },
+            "& .MuiListItemButton-root": {
+              borderRadius: 8,
+              marginInline: 8,
+            },
+            "& .MuiListItemButton-root.Mui-selected, & .MuiListItemButton-root.Mui-selected:hover": {
+              backgroundColor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText,
+            },
+          }),
         },
       },
     },

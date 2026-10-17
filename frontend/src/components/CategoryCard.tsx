@@ -9,6 +9,8 @@ import {
   IconButton,
   TextField,
   Stack,
+  InputAdornment,
+  LinearProgress,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
@@ -19,6 +21,10 @@ import { cardColors } from "../theme";
 import type { CardColorName } from "../theme";
 import TodoItem from "./TodoItem";
 import { createTodo, type Todo } from "../api/todos";
+import { useCurrentSpending } from "../hooks/useCurrentSpending";
+import { useOverBudgetWarning } from "../hooks/useOverBudgetWarning";
+import { formatCurrency, parseCost, roundToCents } from "../utils/currency";
+import OverBudgetDialog from "./OverBudgetDialog";
 
 const STORAGE_PREFIX = "todo-app-card-color-";
 const colorNames = Object.keys(cardColors) as CardColorName[];
@@ -56,19 +62,38 @@ function CategoryCard({
   );
   const [isAddingTodo, setIsAddingTodo] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
+  const [newTodoCost, setNewTodoCost] = useState("");
+  const { saveWithWarning, dialogProps } = useOverBudgetWarning();
+  const parsedCost = parseCost(newTodoCost);
+
+  const { data: spending } = useCurrentSpending();
+  const categorySpending = spending?.categories.find(
+    (c) => c.categoryId === categoryId,
+  );
+  const estimateLeft = roundToCents(
+    (categorySpending?.budget ?? 0) - (categorySpending?.estimated ?? 0),
+  );
+  const isEstimateOver = estimateLeft < 0;
+  const estimatePercent = categorySpending?.budget
+    ? (categorySpending.estimated / categorySpending.budget) * 100
+    : 0;
 
   const createTodoMutation = useMutation({
     mutationFn: ({
       title,
       categoryId,
+      estimatedCost,
     }: {
       title: string;
       categoryId: number;
-    }) => createTodo(title, categoryId),
+      estimatedCost: number;
+    }) => createTodo(title, categoryId, estimatedCost),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["spending"] });
       setIsAddingTodo(false);
       setNewTodoTitle("");
+      setNewTodoCost("");
     },
   });
 
@@ -82,11 +107,16 @@ function CategoryCard({
     if (
       !newTodoTitle.trim() ||
       categoryId === null ||
-      !Number.isFinite(categoryId)
+      !Number.isFinite(categoryId) ||
+      parsedCost === null
     ) {
       return;
     }
-    createTodoMutation.mutate({ title: newTodoTitle.trim(), categoryId });
+    const title = newTodoTitle.trim();
+    const estimatedCost = parsedCost;
+    saveWithWarning(categoryId, estimatedCost, () =>
+      createTodoMutation.mutate({ title, categoryId, estimatedCost }),
+    );
   }
 
   const backgroundColor =
@@ -134,11 +164,11 @@ function CategoryCard({
           </Typography>
 
           {categoryId !== null && (
-            <Tooltip title="Add todo to this category">
+            <Tooltip title="Add item to this category">
               <IconButton
                 size="small"
                 onClick={() => setIsAddingTodo((prev) => !prev)}
-                aria-label="Add todo to this category"
+                aria-label="Add item to this category"
                 sx={{ ml: "auto" }}
               >
                 <AddIcon fontSize="small" />
@@ -154,11 +184,27 @@ function CategoryCard({
                 size="small"
                 value={newTodoTitle}
                 onChange={(e) => setNewTodoTitle(e.target.value)}
-                placeholder="New task"
+                placeholder="New item"
                 fullWidth
                 autoFocus
               />
-              <IconButton type="submit" size="small" aria-label="Save new task">
+              <TextField
+                size="small"
+                type="number"
+                value={newTodoCost}
+                onChange={(e) => setNewTodoCost(e.target.value)}
+                placeholder="0.00"
+                error={parsedCost === null}
+                aria-label="Estimated cost"
+                slotProps={{
+                  input: {
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  },
+                  htmlInput: { min: 0, step: "0.01" },
+                }}
+                sx={{ width: 120, flexShrink: 0 }}
+              />
+              <IconButton type="submit" size="small" aria-label="Save new item">
                 <CheckIcon fontSize="small" />
               </IconButton>
               <IconButton
@@ -167,13 +213,45 @@ function CategoryCard({
                   setIsAddingTodo(false);
                   setNewTodoTitle("");
                 }}
-                aria-label="Cancel add task"
+                aria-label="Cancel add item"
               >
                 <CloseIcon fontSize="small" />
               </IconButton>
             </Stack>
           </form>
         )}
+
+        {/* The list's estimate against the budget. Logged spending lives on
+            the Dashboard and Budget page, so it isn't mixed in here. */}
+        {categorySpending &&
+          (categorySpending.budget > 0 ? (
+            <Box sx={{ marginTop: 1 }}>
+              <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                <Typography variant="body2">
+                  {formatCurrency(categorySpending.estimated)} estimated of{" "}
+                  {formatCurrency(categorySpending.budget)}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color={isEstimateOver ? "error" : "text.secondary"}
+                >
+                  {isEstimateOver
+                    ? `${formatCurrency(-estimateLeft)} over`
+                    : `${formatCurrency(estimateLeft)} left`}
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(estimatePercent, 100)}
+                color={isEstimateOver ? "error" : estimatePercent >= 80 ? "warning" : "primary"}
+                sx={{ marginTop: 0.5 }}
+              />
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ marginTop: 1 }}>
+              {formatCurrency(categorySpending.estimated)} estimated · no budget set
+            </Typography>
+          ))}
       </Box>
 
       <Box
@@ -227,6 +305,8 @@ function CategoryCard({
           </Box>
         </Tooltip>
       </Box>
+
+      <OverBudgetDialog {...dialogProps} />
     </Card>
   );
 }

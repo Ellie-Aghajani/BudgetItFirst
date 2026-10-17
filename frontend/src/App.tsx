@@ -5,6 +5,9 @@ import { useAppSelector } from "./store/hooks";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
 import BudgetScreen from "./components/BudgetScreen";
+import DashboardScreen from "./components/DashboardScreen";
+import ReportsScreen from "./components/ReportsScreen";
+import MonthRollover from "./components/MonthRollover";
 import AuthScreen from "./components/AuthScreen";
 
 function App() {
@@ -25,6 +28,7 @@ function App() {
         <AuthScreen />
       ) : (
         <Box sx={{ display: "flex", width: "100%", minHeight: "100vh", overflowX: "hidden" }}>
+          <MonthRollover />
           <Sidebar />
           <Box
             component="main"
@@ -36,7 +40,15 @@ function App() {
               boxSizing: "border-box",
             }}
           >
-            {activeView === "budget" ? <BudgetScreen /> : <MainContent />}
+            {activeView === "dashboard" ? (
+              <DashboardScreen />
+            ) : activeView === "budget" ? (
+              <BudgetScreen />
+            ) : activeView === "reports" ? (
+              <ReportsScreen />
+            ) : (
+              <MainContent />
+            )}
           </Box>
         </Box>
       )}

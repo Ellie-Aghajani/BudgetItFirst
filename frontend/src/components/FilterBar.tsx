@@ -5,7 +5,12 @@ import { setFilter, setSelectedCategoryId } from "../store/uiSlice";
 import type { Filter } from "../store/uiSlice";
 import { fetchCategories } from "../api/categories";
 
-const options: Filter[] = ["all", "active", "completed"];
+// The stored values stay the same; only what the user sees changed.
+const options: { value: Filter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "active", label: "To buy" },
+  { value: "completed", label: "Bought" },
+];
 
 function FilterBar() {
   const dispatch = useAppDispatch();
@@ -34,16 +39,16 @@ function FilterBar() {
       {options.map((option) => (
         <Button
           size="small"
-          key={option}
-          variant="outlined"
-          color={filter === option ? "primary" : "inherit"}
+          key={option.value}
+          variant={filter === option.value ? "contained" : "outlined"}
+          color={filter === option.value ? "primary" : "inherit"}
           onClick={() => {
-            dispatch(setFilter(option));
+            dispatch(setFilter(option.value));
             dispatch(setSelectedCategoryId(null));
           }}
           sx={{ minWidth: 100 }}
         >
-          {option}
+          {option.label}
         </Button>
       ))}
 
@@ -51,7 +56,7 @@ function FilterBar() {
         <Button
           size="small"
           key={category.id}
-          variant="outlined"
+          variant={selectedCategoryId === category.id ? "contained" : "outlined"}
           color={selectedCategoryId === category.id ? "primary" : "inherit"}
           onClick={() =>
             dispatch(

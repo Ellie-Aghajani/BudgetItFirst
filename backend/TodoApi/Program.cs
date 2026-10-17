@@ -49,6 +49,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     ));
 builder.Services.AddScoped<ITodoRepository, TodoRepository>();
 builder.Services.AddScoped<ISpendingService, SpendingService>();
+builder.Services.AddScoped<IMonthService, MonthService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<IActivityLogger, TodoActivityLogger>();

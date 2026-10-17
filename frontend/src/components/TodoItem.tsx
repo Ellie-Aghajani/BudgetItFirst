@@ -10,17 +10,24 @@ import {
   TextField,
   Stack,
   Box,
+  InputAdornment,
 } from "@mui/material";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { toggleTodo, deleteTodo, renameTodo } from "../api/todos";
+import { toggleTodo, deleteTodo, updateTodo } from "../api/todos";
 import type { Todo } from "../api/todos";
+import { useOverBudgetWarning } from "../hooks/useOverBudgetWarning";
+import { formatCurrency, parseCost } from "../utils/currency";
+import OverBudgetDialog from "./OverBudgetDialog";
 
 function TodoItem({ todo }: { todo: Todo }) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(todo.title);
+  const [draftCost, setDraftCost] = useState(String(todo.estimatedCost));
+  const { saveWithWarning, dialogProps } = useOverBudgetWarning();
+  const parsedCost = parseCost(draftCost);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
   const toggleMutation = useMutation({
@@ -60,25 +67,40 @@ function TodoItem({ todo }: { todo: Todo }) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["spending"] });
     },
   });
 
-  const renameMutation = useMutation({
-    mutationFn: ({ todo, newTitle }: { todo: Todo; newTitle: string }) =>
-      renameTodo(todo, newTitle),
+  const updateMutation = useMutation({
+    mutationFn: (changes: { title: string; estimatedCost: number }) =>
+      updateTodo(todo, changes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["spending"] });
       setIsEditing(false);
     },
   });
 
-  function handleRenameSubmit(e: React.FormEvent) {
+  function startEditing() {
+    setDraftTitle(todo.title);
+    setDraftCost(String(todo.estimatedCost));
+    setIsEditing(true);
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!draftTitle.trim() || draftTitle === todo.title) {
+    if (parsedCost === null) return;
+
+    const title = draftTitle.trim();
+    const estimatedCost = parsedCost;
+    if (!title || (title === todo.title && estimatedCost === todo.estimatedCost)) {
       setIsEditing(false);
       return;
     }
-    renameMutation.mutate({ todo, newTitle: draftTitle });
+    // Only the increase counts toward the budget: editing $10 → $12 adds $2.
+    saveWithWarning(todo.categoryId, estimatedCost - todo.estimatedCost, () =>
+      updateMutation.mutate({ title, estimatedCost }),
+    );
   }
 
   return (
@@ -99,7 +121,7 @@ function TodoItem({ todo }: { todo: Todo }) {
         />
 
         {isEditing ? (
-          <form onSubmit={handleRenameSubmit} style={{ flex: 1, minWidth: 0 }}>
+          <form onSubmit={handleEditSubmit} style={{ flex: 1, minWidth: 0 }}>
             <Stack
               direction={{ xs: "column", sm: "row" }}
               spacing={1}
@@ -115,12 +137,27 @@ function TodoItem({ todo }: { todo: Todo }) {
                 autoFocus
                 fullWidth
               />
+              <TextField
+                size="small"
+                type="number"
+                value={draftCost}
+                onChange={(e) => setDraftCost(e.target.value)}
+                error={parsedCost === null}
+                aria-label="Estimated cost"
+                slotProps={{
+                  input: {
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  },
+                  htmlInput: { min: 0, step: "0.01" },
+                }}
+                sx={{ width: { sm: 140 }, flexShrink: 0 }}
+              />
               <Stack
                 direction="row"
                 spacing={1}
                 sx={{ justifyContent: "flex-end" }}
               >
-                <IconButton type="submit" size="small" aria-label="Save task">
+                <IconButton type="submit" size="small" aria-label="Save item">
                   ✓
                 </IconButton>
                 <IconButton
@@ -136,6 +173,7 @@ function TodoItem({ todo }: { todo: Todo }) {
         ) : (
           <ListItemText
             primary={todo.title}
+            secondary={todo.estimatedCost > 0 ? formatCurrency(todo.estimatedCost) : undefined}
             sx={{
               textDecoration: todo.isComplete ? "line-through" : "none",
               color: (t) =>
@@ -168,8 +206,8 @@ function TodoItem({ todo }: { todo: Todo }) {
           >
             <IconButton
               size="small"
-              onClick={() => setIsEditing(true)}
-              aria-label="Update task"
+              onClick={startEditing}
+              aria-label="Edit item"
             >
               <EditIcon fontSize="small" />
             </IconButton>
@@ -177,7 +215,7 @@ function TodoItem({ todo }: { todo: Todo }) {
               size="small"
               color="error"
               onClick={() => deleteMutation.mutate(todo.id)}
-              aria-label="Delete task"
+              aria-label="Delete item"
             >
               <DeleteIcon fontSize="small" />
             </IconButton>
@@ -199,7 +237,7 @@ function TodoItem({ todo }: { todo: Todo }) {
       >
         <MenuItem
           onClick={() => {
-            setIsEditing(true);
+            startEditing();
             setMenuAnchor(null);
           }}
         >
@@ -214,6 +252,8 @@ function TodoItem({ todo }: { todo: Todo }) {
           Delete
         </MenuItem>
       </Menu>
+
+      <OverBudgetDialog {...dialogProps} />
     </ListItem>
   );
 }

@@ -27,7 +27,7 @@ function TodoList() {
 
   if (isLoading) return <Typography>Loading...</Typography>;
   if (isError)
-    return <Typography>Something went wrong loading todos.</Typography>;
+    return <Typography>Something went wrong loading your shopping list.</Typography>;
 
   const statusFilteredTodos = todos?.filter((todo) =>
     filter === "active"
@@ -78,12 +78,12 @@ function TodoList() {
   if (visibleGroups.length === 0) {
     const message =
       selectedCategoryId !== null
-        ? "No todos in this category."
+        ? "No items in this category."
         : filter === "active"
-          ? "No active todos."
+          ? "Nothing left to buy."
           : filter === "completed"
-            ? "No completed todos."
-            : "No todos yet — add one above.";
+            ? "Nothing bought yet."
+            : "Your shopping list is empty — add an item above.";
 
     return (
       <Typography

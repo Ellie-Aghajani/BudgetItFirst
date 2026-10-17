@@ -19,7 +19,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import HomeIcon from "@mui/icons-material/Home";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ChecklistIcon from "@mui/icons-material/Checklist";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -27,6 +27,8 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import { fetchTodos, deleteAllTodos } from "../api/todos";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { toggleTheme, setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
@@ -60,6 +62,7 @@ function Sidebar() {
     mutationFn: deleteAllTodos,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["spending"] });
       setIsConfirmOpen(false);
     },
   });
@@ -73,9 +76,9 @@ function Sidebar() {
   }
 
   const navItems: { label: string; icon: React.ReactNode; filter: Filter; count: number }[] = [
-    { label: "All Tasks", icon: <ChecklistIcon />, filter: "all", count: total },
-    { label: "Active", icon: <PlayArrowIcon />, filter: "active", count: activeCount },
-    { label: "Completed", icon: <CheckCircleIcon />, filter: "completed", count: completedCount },
+    { label: "All Items", icon: <ChecklistIcon />, filter: "all", count: total },
+    { label: "To Buy", icon: <PlayArrowIcon />, filter: "active", count: activeCount },
+    { label: "Bought", icon: <CheckCircleIcon />, filter: "completed", count: completedCount },
   ];
 
   const drawerContent = (
@@ -84,13 +87,26 @@ function Sidebar() {
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <ChecklistIcon color="primary" />
           <Typography variant="h2" sx={{ textTransform: "none" }}>
-            To-Do
+            Budget It First
           </Typography>
         </Stack>
       </Box>
 
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         <List>
+          <ListItemButton
+            selected={activeView === "dashboard"}
+            onClick={() => {
+              dispatch(setActiveView("dashboard"));
+              dispatch(closeSidebar());
+            }}
+          >
+            <ListItemIcon>
+              <DashboardIcon />
+            </ListItemIcon>
+            <ListItemText primary="Dashboard" />
+          </ListItemButton>
+
           <ListItemButton
             selected={activeView === "tasks"}
             onClick={() => {
@@ -99,9 +115,9 @@ function Sidebar() {
             }}
           >
             <ListItemIcon>
-              <HomeIcon />
+              <ShoppingCartIcon />
             </ListItemIcon>
-            <ListItemText primary="Home" />
+            <ListItemText primary="Shopping List" />
           </ListItemButton>
 
           <ListItemButton
@@ -115,6 +131,19 @@ function Sidebar() {
               <AccountBalanceWalletIcon />
             </ListItemIcon>
             <ListItemText primary="Budget" />
+          </ListItemButton>
+
+          <ListItemButton
+            selected={activeView === "reports"}
+            onClick={() => {
+              dispatch(setActiveView("reports"));
+              dispatch(closeSidebar());
+            }}
+          >
+            <ListItemIcon>
+              <AssessmentIcon />
+            </ListItemIcon>
+            <ListItemText primary="Reports" />
           </ListItemButton>
 
           {navItems.map((item) => (
@@ -137,7 +166,7 @@ function Sidebar() {
             <ListItemIcon>
               <DeleteSweepIcon color="error" />
             </ListItemIcon>
-            <ListItemText primary="Delete All" sx={{ color: "error.main" }} />
+            <ListItemText primary="Clear List" sx={{ color: "error.main" }} />
           </ListItemButton>
 
           <CategoryListItems />
@@ -148,8 +177,7 @@ function Sidebar() {
         {email && (
           <Typography
             variant="body2"
-            color="text.secondary"
-            sx={{ marginBottom: 1, wordBreak: "break-word" }}
+            sx={{ marginBottom: 1, wordBreak: "break-word", opacity: 0.7 }}
           >
             {email}
           </Typography>
@@ -222,14 +250,14 @@ function Sidebar() {
       </Drawer>
 
       <Dialog open={isConfirmOpen} onClose={() => setIsConfirmOpen(false)}>
-        <DialogTitle>Delete all tasks?</DialogTitle>
+        <DialogTitle>Clear the shopping list?</DialogTitle>
         <DialogContent>
-          This will permanently delete all {total} tasks. This cannot be undone.
+          This will permanently delete all {total} items on this month's list. This cannot be undone.
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsConfirmOpen(false)}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={() => deleteAllMutation.mutate()}>
-            Delete All
+          <Button color="error" onClick={() => deleteAllMutation.mutate()}>
+            Clear list
           </Button>
         </DialogActions>
       </Dialog>
@@ -241,7 +269,7 @@ function Sidebar() {
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert severity="info" onClose={() => setNoTodosMessage(false)}>
-          There aren't any todos to delete.
+          The shopping list is already empty.
         </Alert>
       </Snackbar>
     </>

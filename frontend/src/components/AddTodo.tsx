@@ -15,15 +15,21 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { createTodo } from "../api/todos";
 import { createCategory, fetchCategories } from "../api/categories";
+import { useOverBudgetWarning } from "../hooks/useOverBudgetWarning";
+import { parseCost } from "../utils/currency";
+import OverBudgetDialog from "./OverBudgetDialog";
 
 const ADD_CATEGORY_VALUE = "__add_category__";
 
 function AddTodo() {
   const [title, setTitle] = useState("");
+  const [cost, setCost] = useState("");
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [draftCategoryName, setDraftCategoryName] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const queryClient = useQueryClient();
+  const { saveWithWarning, dialogProps } = useOverBudgetWarning();
+  const parsedCost = parseCost(cost);
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
@@ -34,20 +40,26 @@ const createTodoMutation = useMutation({
   mutationFn: ({
     title,
     categoryId,
+    estimatedCost,
   }: {
     title: string;
     categoryId: number;
-  }) => createTodo(title, categoryId),
+    estimatedCost: number;
+  }) => createTodo(title, categoryId, estimatedCost),
   onSuccess: (newTodo) => {
     queryClient.invalidateQueries({ queryKey: ["todos"] });
+    queryClient.invalidateQueries({ queryKey: ["spending"] });
     window.electronApp?.showNotification("Todo created", newTodo.title);
   },
 });
 
   const createCategoryMutation = useMutation({
-    mutationFn: createCategory,
+    // Wrapped so React Query's second argument (its context object) can't
+    // land in createCategory's optional budget parameter.
+    mutationFn: (name: string) => createCategory(name),
     onSuccess: (newCategory) => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["spending"] });
       setCategoryId(newCategory.id);
       setDraftCategoryName("");
       setIsAddingCategory(false);
@@ -56,10 +68,14 @@ const createTodoMutation = useMutation({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || categoryId === "") return;
+    if (!title.trim() || categoryId === "" || parsedCost === null) return;
 
-    createTodoMutation.mutate({ title, categoryId });
-    setTitle("");
+    const estimatedCost = parsedCost;
+    saveWithWarning(categoryId, estimatedCost, () => {
+      createTodoMutation.mutate({ title, categoryId, estimatedCost });
+      setTitle("");
+      setCost("");
+    });
   }
 
   function handleCategoryCreate() {
@@ -79,7 +95,7 @@ const createTodoMutation = useMutation({
         <TextField
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="What needs doing?"
+          placeholder="Add an item to buy"
           fullWidth
           slotProps={{
             input: {
@@ -91,12 +107,26 @@ const createTodoMutation = useMutation({
             },
           }}
           sx={{
-            "& .MuiOutlinedInput-root": {
-              borderRadius: 999,
-            },
             flex: 1,
             minWidth: 220,
           }}
+        />
+
+        <TextField
+          value={cost}
+          onChange={(e) => setCost(e.target.value)}
+          placeholder="0.00"
+          type="number"
+          size="small"
+          error={parsedCost === null}
+          aria-label="Estimated cost"
+          slotProps={{
+            input: {
+              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            },
+            htmlInput: { min: 0, step: "0.01" },
+          }}
+          sx={{ width: 130 }}
         />
 
         <Box
@@ -114,7 +144,7 @@ const createTodoMutation = useMutation({
             }}
             displayEmpty
             size="small"
-            sx={{ minWidth: 140, borderRadius: 999 }}
+            sx={{ minWidth: 140 }}
           >
             <MenuItem value="" disabled>
               {categories && categories.length > 0 ? "Category" : "No category"}
@@ -172,6 +202,8 @@ const createTodoMutation = useMutation({
           Add
         </Button>
       </Stack>
+
+      <OverBudgetDialog {...dialogProps} />
     </form>
   );
 }
