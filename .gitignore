@@ -14,8 +14,11 @@ release/
 .vscode/
 .idea/
 .Development.json/
-
 .env
 
 backend/TodoApi/firebase-service-account.json
 backend/TodoApi/appsettings.Production.json
+
+docs/figma-budgetbetter.png
+docs/budgeting-plan.md
+CLAUDE.md
