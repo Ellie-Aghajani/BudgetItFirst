@@ -3,6 +3,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 
 export type Filter = "all" | "active" | "completed";
 export type Theme = "light" | "dark";
+export type View = "tasks" | "budget";
 
 const AFFIRMATION_KEY = "todo-app-affirmation";
 
@@ -16,6 +17,7 @@ interface UiState {
   affirmation: string;
   selectedCategoryId: number | null;
   isSidebarOpen: boolean;
+  activeView: View;
 }
 
 const initialState: UiState = {
@@ -24,6 +26,7 @@ const initialState: UiState = {
   affirmation: loadAffirmation(),
   selectedCategoryId: null,
   isSidebarOpen: false,
+  activeView: "tasks",
 };
 
 const uiSlice = createSlice({
@@ -49,6 +52,9 @@ const uiSlice = createSlice({
     closeSidebar: (state) => {
       state.isSidebarOpen = false;
     },
+    setActiveView: (state, action: PayloadAction<View>) => {
+      state.activeView = action.payload;
+    },
   },
 });
 
@@ -59,5 +65,6 @@ export const {
   setSelectedCategoryId,
   toggleSidebar,
   closeSidebar,
+  setActiveView,
 } = uiSlice.actions;
 export default uiSlice.reducer;

@@ -26,9 +26,10 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import LogoutIcon from "@mui/icons-material/Logout";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import { fetchTodos, deleteAllTodos } from "../api/todos";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { toggleTheme, setFilter, closeSidebar } from "../store/uiSlice";
+import { toggleTheme, setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
 import type { Filter } from "../store/uiSlice";
 import CategoryListItems from "./CategoryListItems";
 import { signOutUser } from "../api/auth";
@@ -40,6 +41,7 @@ function Sidebar() {
   const filter = useAppSelector((state) => state.ui.filter);
   const theme = useAppSelector((state) => state.ui.theme);
   const isSidebarOpen = useAppSelector((state) => state.ui.isSidebarOpen);
+  const activeView = useAppSelector((state) => state.ui.activeView);
   const email = useAppSelector((state) => state.auth.email);
   const queryClient = useQueryClient();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -89,19 +91,39 @@ function Sidebar() {
 
       <Box sx={{ flex: 1, overflowY: "auto" }}>
         <List>
-          <ListItemButton selected>
+          <ListItemButton
+            selected={activeView === "tasks"}
+            onClick={() => {
+              dispatch(setActiveView("tasks"));
+              dispatch(closeSidebar());
+            }}
+          >
             <ListItemIcon>
               <HomeIcon />
             </ListItemIcon>
             <ListItemText primary="Home" />
           </ListItemButton>
 
+          <ListItemButton
+            selected={activeView === "budget"}
+            onClick={() => {
+              dispatch(setActiveView("budget"));
+              dispatch(closeSidebar());
+            }}
+          >
+            <ListItemIcon>
+              <AccountBalanceWalletIcon />
+            </ListItemIcon>
+            <ListItemText primary="Budget" />
+          </ListItemButton>
+
           {navItems.map((item) => (
             <ListItemButton
               key={item.filter}
-              selected={filter === item.filter}
+              selected={activeView === "tasks" && filter === item.filter}
               onClick={() => {
                 dispatch(setFilter(item.filter));
+                dispatch(setActiveView("tasks"));
                 dispatch(closeSidebar());
               }}
             >

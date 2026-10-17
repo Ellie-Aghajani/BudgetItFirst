@@ -4,12 +4,14 @@ import { getTheme } from "./theme";
 import { useAppSelector } from "./store/hooks";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
+import BudgetScreen from "./components/BudgetScreen";
 import AuthScreen from "./components/AuthScreen";
 
 function App() {
   const mode = useAppSelector((state) => state.ui.theme);
   const theme = useMemo(() => getTheme(mode), [mode]);
   const { uid, isLoading } = useAppSelector((state) => state.auth);
+  const activeView = useAppSelector((state) => state.ui.activeView);
 
   return (
     <ThemeProvider theme={theme}>
@@ -34,7 +36,7 @@ function App() {
               boxSizing: "border-box",
             }}
           >
-            <MainContent />
+            {activeView === "budget" ? <BudgetScreen /> : <MainContent />}
           </Box>
         </Box>
       )}
