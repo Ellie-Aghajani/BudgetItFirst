@@ -60,7 +60,7 @@ export function getTheme(mode: "light" | "dark") {
     palette: {
       mode,
       primary: {
-        main: "#21BFD4",
+        main: "#067387",
         contrastText: "#FFFFFF",
       },
       secondary: {
