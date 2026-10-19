@@ -10,7 +10,6 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
-  Switch,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -23,7 +22,6 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ChecklistIcon from "@mui/icons-material/Checklist";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -31,7 +29,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import { fetchTodos, deleteAllTodos } from "../api/todos";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { toggleTheme, setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
+import { setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
 import type { Filter } from "../store/uiSlice";
 import { signOutUser } from "../api/auth";
 
@@ -40,7 +38,6 @@ const DRAWER_WIDTH = 260;
 function Sidebar() {
   const dispatch = useAppDispatch();
   const filter = useAppSelector((state) => state.ui.filter);
-  const theme = useAppSelector((state) => state.ui.theme);
   const isSidebarOpen = useAppSelector((state) => state.ui.isSidebarOpen);
   const activeView = useAppSelector((state) => state.ui.activeView);
   const email = useAppSelector((state) => state.auth.email);
@@ -180,17 +177,6 @@ function Sidebar() {
             {email}
           </Typography>
         )}
-
-        <Stack
-          direction="row"
-          sx={{ alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}
-        >
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <DarkModeIcon fontSize="small" />
-            <Typography variant="body2">Dark Mode</Typography>
-          </Stack>
-          <Switch checked={theme === "dark"} onChange={() => dispatch(toggleTheme())} />
-        </Stack>
 
         <Button
           variant="outlined"

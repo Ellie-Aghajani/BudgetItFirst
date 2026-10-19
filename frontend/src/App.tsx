@@ -4,9 +4,10 @@ import {
   Box,
   CircularProgress,
 } from "@mui/material";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { getTheme } from "./theme";
-import { useAppSelector } from "./store/hooks";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
+import { syncThemeWithClock } from "./store/uiSlice";
 import Sidebar from "./components/Sidebar";
 import MainContent from "./components/MainContent";
 import BudgetScreen from "./components/BudgetScreen";
@@ -18,7 +19,17 @@ import MobileNavbar from "./components/MobileNavbar";
 import SpendPrompt from "./components/SpendPrompt";
 
 function App() {
+  const dispatch = useAppDispatch();
   const mode = useAppSelector((state) => state.ui.theme);
+
+  // Until the user picks a mode, switch to dark at 7pm and back at 7am.
+  useEffect(() => {
+    const intervalId = setInterval(
+      () => dispatch(syncThemeWithClock(new Date().getHours())),
+      60_000,
+    );
+    return () => clearInterval(intervalId);
+  }, [dispatch]);
   const theme = useMemo(() => getTheme(mode), [mode]);
   const { uid, isLoading } = useAppSelector((state) => state.auth);
   const activeView = useAppSelector((state) => state.ui.activeView);

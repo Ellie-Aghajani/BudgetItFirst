@@ -12,7 +12,7 @@ function AuthListener({ children }: { children: React.ReactNode }) {
     // sign-in/sign-out happens anywhere in the app.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        dispatch(setUser({ uid: user.uid, email: user.email }));
+        dispatch(setUser({ uid: user.uid, email: user.email, displayName: user.displayName }));
       } else {
         dispatch(clearUser());
       }

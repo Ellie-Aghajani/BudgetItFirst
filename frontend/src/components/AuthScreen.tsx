@@ -16,11 +16,15 @@ import {
   signInWithGoogle,
   resetPassword,
 } from "../api/auth";
+import { useAppDispatch } from "../store/hooks";
+import { setDisplayName } from "../store/authSlice";
 
 type Mode = "signIn" | "signUp" | "resetPassword";
 
 function AuthScreen() {
   const [mode, setMode] = useState<Mode>("signIn");
+  const dispatch = useAppDispatch();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -35,7 +39,10 @@ function AuthScreen() {
       if (mode === "signIn") {
         await signInWithEmail(email, password);
       } else if (mode === "signUp") {
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(email, password, name);
+        // Firebase reports the new user before the name is saved, so pass
+        // the name along directly for the greeting.
+        dispatch(setDisplayName(name.trim()));
       } else if (mode === "resetPassword") {
         await resetPassword(email);
         setInfoMessage("Password reset email sent — check your inbox.");
@@ -97,6 +104,16 @@ function AuthScreen() {
 
         <form onSubmit={handleSubmit}>
           <Stack spacing={2}>
+            {mode === "signUp" && (
+              <TextField
+                label="First name"
+                value={name}
+                onChange={(e) => setName(e.target.value.slice(0, 50))}
+                required
+                fullWidth
+                autoComplete="given-name"
+              />
+            )}
             <TextField
               label="Email"
               type="email"

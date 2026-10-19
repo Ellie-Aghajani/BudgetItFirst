@@ -2,10 +2,9 @@ import { AppBar, Toolbar, Typography, IconButton, Stack } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChecklistIcon from "@mui/icons-material/Checklist";
 import HomeIcon from "@mui/icons-material/Home";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { toggleTheme, toggleSidebar, setActiveView } from "../store/uiSlice";
+import { toggleSidebar, setActiveView } from "../store/uiSlice";
+import ThemeToggle from "./ThemeToggle";
 import { SIDEBAR_BG } from "../theme";
 
 // Stands in for the permanent sidebar below the "md" breakpoint (900px),
@@ -58,13 +57,7 @@ function MobileNavbar() {
         >
           <HomeIcon />
         </IconButton>
-        <IconButton
-          color="inherit"
-          onClick={() => dispatch(toggleTheme())}
-          aria-label="Toggle dark mode"
-        >
-          {themeMode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
-        </IconButton>
+        <ThemeToggle label="Dark" />
       </Toolbar>
     </AppBar>
   );

@@ -6,6 +6,22 @@ export type Theme = "light" | "dark";
 export type View = "dashboard" | "tasks" | "budget" | "reports";
 
 const AFFIRMATION_KEY = "todo-app-affirmation";
+const THEME_KEY = "budget-theme";
+
+// Dark from 7pm to 7am. Used until the user picks a mode themselves.
+export function themeForHour(hour: number): Theme {
+  return hour >= 19 || hour < 7 ? "dark" : "light";
+}
+
+// A mode the user picked with the toggle, if any. null = follow the clock.
+function loadChosenTheme(): Theme | null {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    return saved === "light" || saved === "dark" ? saved : null;
+  } catch {
+    return null;
+  }
+}
 
 function loadAffirmation(): string {
   return localStorage.getItem(AFFIRMATION_KEY) ?? "Progress, not perfection.";
@@ -51,6 +67,8 @@ export interface SpendingDraft {
 interface UiState {
   filter: Filter;
   theme: Theme;
+  // "user" once the toggle is used; until then the mode follows the time of day.
+  themeSource: "clock" | "user";
   affirmation: string;
   selectedCategoryId: number | null;
   isSidebarOpen: boolean;
@@ -69,7 +87,8 @@ interface UiState {
 
 const initialState: UiState = {
   filter: "all",
-  theme: "light",
+  theme: loadChosenTheme() ?? themeForHour(new Date().getHours()),
+  themeSource: loadChosenTheme() ? "user" : "clock",
   affirmation: loadAffirmation(),
   selectedCategoryId: null,
   isSidebarOpen: false,
@@ -103,6 +122,19 @@ const uiSlice = createSlice({
     },
     toggleTheme: (state) => {
       state.theme = state.theme === "light" ? "dark" : "light";
+      // A deliberate choice: remember it and stop following the clock.
+      state.themeSource = "user";
+      try {
+        localStorage.setItem(THEME_KEY, state.theme);
+      } catch {
+        // Storage blocked: the choice lasts until the page reloads.
+      }
+    },
+    // Called every minute by App. Only moves the mode while the user hasn't
+    // picked one, so it never fights the toggle.
+    syncThemeWithClock: (state, action: PayloadAction<number>) => {
+      if (state.themeSource === "clock")
+        state.theme = themeForHour(action.payload);
     },
     setAffirmation: (state, action: PayloadAction<string>) => {
       state.affirmation = action.payload;
@@ -230,6 +262,7 @@ const uiSlice = createSlice({
 export const {
   setFilter,
   toggleTheme,
+  syncThemeWithClock,
   setAffirmation,
   setSelectedCategoryId,
   toggleSidebar,
