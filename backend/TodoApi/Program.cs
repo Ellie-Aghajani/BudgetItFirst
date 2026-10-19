@@ -30,7 +30,9 @@ builder.Services.AddCors(options =>
             if (string.IsNullOrEmpty(origin)) return false;
             var uri = new Uri(origin);
             return uri.Host == "localhost"
-                || uri.Host == "todo-fullstack-electron.vercel.app";
+                || uri.Host == "todo-fullstack-electron.vercel.app"
+                || uri.Host == "budgetitfirst.com"
+                || uri.Host == "www.budgetitfirst.com";
         })
         .AllowAnyHeader()
         .AllowAnyMethod();
