@@ -17,32 +17,46 @@ declare module "@mui/material/styles" {
   }
 }
 
+// Soft tints of the brand and status colors: about 12% of each color over
+// white in light mode, and about 20% over the dark paper color in dark mode.
+// They tint a white card instead of fighting the teal/navy theme.
 export const cardColors = {
-peach:    { light: "#FFD9B3", dark: "#9A6A45" },
-yellow:   { light: "#FFF3B0", dark: "#8F8142" },
-mint:     { light: "#C8F0DE", dark: "#3F785C" },
-blue:     { light: "#CFE3FA", dark: "#426F9F" },
-lavender: { light: "#E6DEFA", dark: "#69568F" },
-pink:     { light: "#FBD3DE", dark: "#965A6C" },
+  teal:     { light: "#E4F7FA", dark: "#134259" },
+  blue:     { light: "#EBF0F6", dark: "#0A3059" },
+  green:    { light: "#E2F7F0", dark: "#104148" },
+  amber:    { light: "#FEF3E2", dark: "#3E3C31" },
+  purple:   { light: "#F1EBFE", dark: "#292E60" },
+  rose:     { light: "#FEE8EC", dark: "#3E2941" },
 } as const;
 
 export type CardColorName = keyof typeof cardColors;
 
-// Categorical chart colors, checked for colorblind-safe separation in both
-// modes. Assigned in this fixed order — never cycled. Categories past the
-// last slot fold into "Other".
+// Categorical chart colors: 11 slots, checked with a palette validator for
+// colorblind-safe separation between neighbors, in both modes (light against
+// white, dark against the dark paper color). Assigned in this fixed order.
+// With more than 11 categories the order repeats; the legend and tooltips
+// still name every slice.
 export const chartColors = {
   series: {
-    light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"],
-    dark: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300"],
+    light: [
+      "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300",
+      "#6250d6", "#e34948", "#14a3b8", "#c2782a", "#4f6fd6",
+    ],
+    dark: [
+      "#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300",
+      "#9085e9", "#e66767", "#1a9db0", "#c27a35", "#6f8de8",
+    ],
   },
-  other: { light: "#9a9994", dark: "#6e7f93" },
 } as const;
 
-// Plain constants rather than palette keys: they're only used by the
-// overrides below, so they don't need to be on the theme object.
-const SIDEBAR_BG = { light: "#0A2A4A", dark: "#071E36" };
+// Plain constants rather than palette keys. SIDEBAR_BG is exported so the
+// mobile navbar matches the sidebar it stands in for.
+export const SIDEBAR_BG = { light: "#0A2A4A", dark: "#071E36" };
 const SUBTLE_SURFACE = { light: "#F8FAFC", dark: "#132A44" };
+
+// Below the "sm" breakpoint (600px). Written out because the theme can't
+// read its own breakpoints helper while it's being created.
+const PHONE = "@media (max-width: 599.95px)";
 
 export function getTheme(mode: "light" | "dark") {
   const isLight = mode === "light";
@@ -96,11 +110,19 @@ export function getTheme(mode: "light" | "dark") {
         fontSize: "2rem",
         lineHeight: "2.5rem",
         fontWeight: 700,
+        [PHONE]: {
+          fontSize: "1.5rem",
+          lineHeight: "2rem",
+        },
       },
       h2: {
         fontSize: "1.5rem",
         lineHeight: "2rem",
         fontWeight: 600,
+        [PHONE]: {
+          fontSize: "1.25rem",
+          lineHeight: "1.75rem",
+        },
       },
       body1: {
         fontSize: "1rem",
@@ -223,6 +245,13 @@ export function getTheme(mode: "light" | "dark") {
       },
       MuiTableCell: {
         styleOverrides: {
+          // Tables scroll sideways on phones; tighter cells mean less scrolling.
+          root: {
+            [PHONE]: {
+              paddingLeft: 8,
+              paddingRight: 8,
+            },
+          },
           head: ({ theme }) => ({
             backgroundColor: SUBTLE_SURFACE[mode],
             color: theme.palette.text.secondary,

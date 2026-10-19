@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Box,
@@ -22,6 +22,7 @@ import { fetchMonths } from "../api/months";
 import { fetchSpending } from "../api/spending";
 import { formatCurrency } from "../utils/currency";
 import { formatMonth, getCurrentMonth } from "../utils/month";
+import { useAppSelector } from "../store/hooks";
 import Header from "./Header";
 import BudgetSummaryTiles from "./BudgetSummaryTiles";
 import SpendingBreakdown from "./SpendingBreakdown";
@@ -30,6 +31,9 @@ function ReportsScreen() {
   const currentMonth = getCurrentMonth();
   // "2026-10" style key; null means "the newest month" (the current one).
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const highlightedId = useAppSelector((state) => state.ui.highlightedCategoryId);
+  // Table rows by category id, so a pick on the chart can scroll to its row.
+  const rowRefs = useRef(new Map<number, HTMLTableRowElement>());
 
   const { data: months } = useQuery({
     queryKey: ["months"],
@@ -44,6 +48,13 @@ function ReportsScreen() {
     queryFn: () => fetchSpending(selected!),
     enabled: selected !== undefined,
   });
+
+  // Runs after the table renders. Coming from the Dashboard, the data may
+  // still be loading, so this re-runs once summary arrives.
+  useEffect(() => {
+    if (highlightedId === null) return;
+    rowRefs.current.get(highlightedId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightedId, summary]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%", minWidth: 0 }}>
@@ -102,7 +113,7 @@ function ReportsScreen() {
           >
             <SpendingBreakdown categories={summary.categories} />
 
-            <Card sx={{ padding: 3, minWidth: 0 }}>
+            <Card sx={{ padding: { xs: 2, sm: 3 }, minWidth: 0 }}>
               <Typography variant="h2" sx={{ textTransform: "none", marginBottom: 2 }}>
                 Budget vs Spent
               </Typography>
@@ -123,7 +134,21 @@ function ReportsScreen() {
                     </TableHead>
                     <TableBody>
                       {summary.categories.map((c) => (
-                        <TableRow key={c.categoryId}>
+                        <TableRow
+                          key={c.categoryId}
+                          selected={c.categoryId === highlightedId}
+                          sx={{
+                            "&.Mui-selected": { backgroundColor: "action.selected" },
+                            // A teal bar on the left edge, so the pick is easy to spot.
+                            "&.Mui-selected td:first-of-type": {
+                              boxShadow: (t) => `inset 3px 0 ${t.palette.primary.main}`,
+                            },
+                          }}
+                          ref={(row) => {
+                            if (row) rowRefs.current.set(c.categoryId, row);
+                            else rowRefs.current.delete(c.categoryId);
+                          }}
+                        >
                           <TableCell>{c.name}</TableCell>
                           <TableCell align="right">
                             {c.budget > 0 ? formatCurrency(c.budget) : "—"}

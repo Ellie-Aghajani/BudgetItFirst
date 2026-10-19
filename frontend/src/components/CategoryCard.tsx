@@ -25,6 +25,8 @@ import { useCurrentSpending } from "../hooks/useCurrentSpending";
 import { useOverBudgetWarning } from "../hooks/useOverBudgetWarning";
 import { formatCurrency, parseCost, roundToCents } from "../utils/currency";
 import OverBudgetDialog from "./OverBudgetDialog";
+import DuplicateItemDialog from "./DuplicateItemDialog";
+import { useDuplicateItemCheck } from "../hooks/useDuplicateItemCheck";
 
 const STORAGE_PREFIX = "todo-app-card-color-";
 const colorNames = Object.keys(cardColors) as CardColorName[];
@@ -64,6 +66,8 @@ function CategoryCard({
   const [newTodoTitle, setNewTodoTitle] = useState("");
   const [newTodoCost, setNewTodoCost] = useState("");
   const { saveWithWarning, dialogProps } = useOverBudgetWarning();
+  const { confirmIfDuplicate, dialogProps: duplicateDialogProps } =
+    useDuplicateItemCheck();
   const parsedCost = parseCost(newTodoCost);
 
   const { data: spending } = useCurrentSpending();
@@ -114,8 +118,11 @@ function CategoryCard({
     }
     const title = newTodoTitle.trim();
     const estimatedCost = parsedCost;
-    saveWithWarning(categoryId, estimatedCost, () =>
-      createTodoMutation.mutate({ title, categoryId, estimatedCost }),
+    // Duplicate check first, then the budget check: two separate questions.
+    confirmIfDuplicate(title, estimatedCost, () =>
+      saveWithWarning(categoryId, estimatedCost, () =>
+        createTodoMutation.mutate({ title, categoryId, estimatedCost }),
+      ),
     );
   }
 
@@ -136,7 +143,7 @@ function CategoryCard({
         sx={{
           backgroundColor:
             themeMode === "light"
-              ? "rgba(39, 39, 18, 0.03)"
+              ? "rgba(10, 42, 74, 0.04)"
               : "rgba(3, 10, 20, 0.07)",
           padding: { xs: "10px 12px 8px", sm: "12px 16px 10px" },
         }}
@@ -198,7 +205,9 @@ function CategoryCard({
                 aria-label="Estimated cost"
                 slotProps={{
                   input: {
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: (
+                      <InputAdornment position="start">$</InputAdornment>
+                    ),
                   },
                   htmlInput: { min: 0, step: "0.01" },
                 }}
@@ -243,13 +252,24 @@ function CategoryCard({
               <LinearProgress
                 variant="determinate"
                 value={Math.min(estimatePercent, 100)}
-                color={isEstimateOver ? "error" : estimatePercent >= 80 ? "warning" : "primary"}
+                color={
+                  isEstimateOver
+                    ? "error"
+                    : estimatePercent >= 80
+                      ? "warning"
+                      : "primary"
+                }
                 sx={{ marginTop: 0.5 }}
               />
             </Box>
           ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ marginTop: 1 }}>
-              {formatCurrency(categorySpending.estimated)} estimated · no budget set
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ marginTop: 1 }}
+            >
+              {formatCurrency(categorySpending.estimated)} estimated · no budget
+              set
             </Typography>
           ))}
       </Box>
@@ -307,6 +327,7 @@ function CategoryCard({
       </Box>
 
       <OverBudgetDialog {...dialogProps} />
+      <DuplicateItemDialog {...duplicateDialogProps} />
     </Card>
   );
 }

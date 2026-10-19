@@ -1,4 +1,4 @@
-import { Box, Typography, Button, CircularProgress, Alert } from "@mui/material";
+import { Box, Stack, Typography, Button, CircularProgress, Alert } from "@mui/material";
 import { useCurrentSpending } from "../hooks/useCurrentSpending";
 import { useAppDispatch } from "../store/hooks";
 import { setActiveView } from "../store/uiSlice";
@@ -8,6 +8,7 @@ import BudgetSummaryTiles from "./BudgetSummaryTiles";
 import SpendingBreakdown from "./SpendingBreakdown";
 import RecentActivity from "./RecentActivity";
 import AddSpending from "./AddSpending";
+import ShoppingListCard from "./ShoppingListCard";
 
 function DashboardScreen() {
   const dispatch = useAppDispatch();
@@ -47,12 +48,15 @@ function DashboardScreen() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", lg: "3fr 2fr" },
+              gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
               gap: 2,
             }}
           >
             <SpendingBreakdown categories={spending.categories} />
-            <RecentActivity />
+            <Stack spacing={2} sx={{ minWidth: 0 }}>
+              <ShoppingListCard />
+              <RecentActivity />
+            </Stack>
           </Box>
         </>
       )}

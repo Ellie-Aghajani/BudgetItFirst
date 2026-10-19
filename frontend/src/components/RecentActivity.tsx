@@ -1,12 +1,26 @@
 import { Fragment, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, Stack, Typography, Box, Divider, IconButton, Alert, Button } from "@mui/material";
+import {
+  Card,
+  Stack,
+  Typography,
+  Box,
+  Divider,
+  IconButton,
+  Alert,
+  Button,
+  Chip,
+  Tooltip,
+} from "@mui/material";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import HistoryIcon from "@mui/icons-material/History";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { deleteExpense, fetchExpenses, type Expense } from "../api/expenses";
 import { fetchCategories } from "../api/categories";
 import { formatCurrency } from "../utils/currency";
+import { useCurrentSpending } from "../hooks/useCurrentSpending";
+import { findBudgetBreakers } from "../utils/overBudget";
 import EditSpendingDialog from "./EditSpendingDialog";
 
 const RECENT_COUNT = 5;
@@ -34,12 +48,15 @@ function RecentActivity() {
     },
   });
 
+  const { data: spending } = useCurrentSpending();
+
   const categoryNames = new Map(categories?.map((c) => [c.id, c.name]));
   const allExpenses = expenses ?? [];
+  const breakers = findBudgetBreakers(allExpenses, spending?.categories ?? []);
   const recentExpenses = showAll ? allExpenses : allExpenses.slice(0, RECENT_COUNT);
 
   return (
-    <Card sx={{ padding: 3, height: "100%" }}>
+    <Card sx={{ padding: { xs: 2, sm: 3 }, flex: 1 }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: "center", marginBottom: 2 }}>
         <HistoryIcon color="primary" />
         <Typography variant="h2" sx={{ textTransform: "none" }}>
@@ -63,6 +80,21 @@ function RecentActivity() {
                   <Typography variant="body2" color="text.secondary" noWrap>
                     {expense.isAdjustment ? "Adjusted on Budget page" : (expense.note ?? "—")}
                   </Typography>
+                  {breakers.has(expense.id) && (
+                    <Tooltip
+                      title={`This took ${breakers.get(expense.id)!.categoryName} over its ${formatCurrency(
+                        breakers.get(expense.id)!.budget,
+                      )} budget. It's ${formatCurrency(breakers.get(expense.id)!.overBy)} over now.`}
+                    >
+                      <Chip
+                        size="small"
+                        color="error"
+                        icon={<WarningAmberIcon />}
+                        label="Went over budget"
+                        sx={{ marginTop: 0.5 }}
+                      />
+                    </Tooltip>
+                  )}
                 </Box>
                 <Box sx={{ textAlign: "right" }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>

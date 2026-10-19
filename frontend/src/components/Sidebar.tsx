@@ -33,7 +33,6 @@ import { fetchTodos, deleteAllTodos } from "../api/todos";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { toggleTheme, setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
 import type { Filter } from "../store/uiSlice";
-import CategoryListItems from "./CategoryListItems";
 import { signOutUser } from "../api/auth";
 
 const DRAWER_WIDTH = 260;
@@ -169,7 +168,6 @@ function Sidebar() {
             <ListItemText primary="Clear List" sx={{ color: "error.main" }} />
           </ListItemButton>
 
-          <CategoryListItems />
         </List>
       </Box>
 

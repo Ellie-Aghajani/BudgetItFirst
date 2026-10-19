@@ -25,6 +25,7 @@ import { useCurrentSpending } from "../hooks/useCurrentSpending";
 import { updateCategoryBudget } from "../api/categories";
 import { setCategorySpent } from "../api/expenses";
 import { formatCurrency, parseCost } from "../utils/currency";
+import CategoryActions from "./CategoryActions";
 
 type EditableField = "budget" | "spent";
 
@@ -101,7 +102,7 @@ function CategoryBudgetTable() {
               },
               htmlInput: { min: 0, step: "0.01" },
             }}
-            sx={{ width: 130 }}
+            sx={{ width: { xs: 100, sm: 130 } }}
           />
           <IconButton
             key="save"
@@ -150,7 +151,7 @@ function CategoryBudgetTable() {
   }
 
   return (
-    <Card sx={{ padding: 3 }}>
+    <Card sx={{ padding: { xs: 2, sm: 3 }, minWidth: 0 }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: "center", marginBottom: 2 }}>
         <CategoryIcon color="primary" />
         <Typography variant="h2" sx={{ textTransform: "none" }}>
@@ -175,6 +176,7 @@ function CategoryBudgetTable() {
                 <TableCell align="right">Budget</TableCell>
                 <TableCell align="right">Spent</TableCell>
                 <TableCell align="right">Remaining</TableCell>
+                <TableCell padding="none" aria-label="Actions" />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -188,6 +190,9 @@ function CategoryBudgetTable() {
                     sx={{ color: category.isOverBudget ? "error.main" : undefined }}
                   >
                     {category.budget > 0 ? formatCurrency(category.remaining) : "—"}
+                  </TableCell>
+                  <TableCell padding="none">
+                    <CategoryActions categoryId={category.categoryId} name={category.name} />
                   </TableCell>
                 </TableRow>
               ))}

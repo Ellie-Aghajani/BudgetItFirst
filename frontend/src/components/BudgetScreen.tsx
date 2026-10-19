@@ -68,7 +68,7 @@ function BudgetScreen() {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%", minWidth: 0 }}>
       <Header />
 
-      <Card sx={{ padding: 3, maxWidth: 520 }}>
+      <Card sx={{ padding: { xs: 2, sm: 3 }, maxWidth: 520 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", marginBottom: 2 }}>
           <AccountBalanceWalletIcon color="primary" />
           <Typography variant="h2" sx={{ textTransform: "none" }}>
@@ -136,10 +136,22 @@ function BudgetScreen() {
         )}
       </Card>
 
-      {/* Uses the saved income, not the draft, so suggestions don't jump while typing. */}
-      <BudgetPlanner monthlyIncome={settings?.monthlyIncome ?? 0} />
+      {/* Side by side from lg (1024px) up. Below that, each half would be too
+          narrow for its table, so they stack. alignItems "start" lets each card
+          keep its own height instead of stretching to match the taller one. */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+          gap: 3,
+          alignItems: "start",
+        }}
+      >
+        {/* Uses the saved income, not the draft, so suggestions don't jump while typing. */}
+        <BudgetPlanner monthlyIncome={settings?.monthlyIncome ?? 0} />
 
-      <CategoryBudgetTable />
+        <CategoryBudgetTable />
+      </Box>
 
       <Snackbar
         open={isSavedMessageOpen}

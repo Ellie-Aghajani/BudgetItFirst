@@ -29,11 +29,16 @@ function FilterBar() {
       direction="row"
       spacing={1}
       useFlexGap
+      // Phones: one row that scrolls sideways, so a long category list doesn't
+      // push the shopping list off the screen. Wider screens wrap and center.
       sx={{
-        justifyContent: "center",
+        justifyContent: { xs: "flex-start", sm: "center" },
         width: "100%",
-        flexWrap: "wrap",
+        flexWrap: { xs: "nowrap", sm: "wrap" },
+        overflowX: { xs: "auto", sm: "visible" },
+        paddingBottom: { xs: 0.5, sm: 0 },
         rowGap: 1,
+        "& > .MuiButton-root": { flexShrink: 0 },
       }}
     >
       {options.map((option) => (
@@ -46,7 +51,7 @@ function FilterBar() {
             dispatch(setFilter(option.value));
             dispatch(setSelectedCategoryId(null));
           }}
-          sx={{ minWidth: 100 }}
+          sx={{ minWidth: { xs: 0, sm: 100 } }}
         >
           {option.label}
         </Button>
@@ -65,7 +70,7 @@ function FilterBar() {
               ),
             )
           }
-          sx={{ minWidth: 100 }}
+          sx={{ minWidth: { xs: 0, sm: 100 } }}
         >
           {category.name}
         </Button>

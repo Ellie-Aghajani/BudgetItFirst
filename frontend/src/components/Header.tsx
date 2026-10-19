@@ -6,10 +6,9 @@ import NightlightIcon from "@mui/icons-material/Nightlight";
 import Brightness5Icon from "@mui/icons-material/Brightness5";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
-import HomeIcon from "@mui/icons-material/Home";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { toggleTheme } from "../store/uiSlice";
-import { toggleSidebar } from "../store/uiSlice";
+
 function getGreeting(hour: number): string {
   if (hour < 5) return "Good night";
   if (hour < 12) return "Good morning";
@@ -58,51 +57,52 @@ function Header() {
   });
 
   return (
-    <Box sx={{ margin: 0 }}>
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        margin: { xs: 0, sm: 3 },
+      }}
+    >
+      <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Typography variant="h1" sx={{ textTransform: "none" }}>
+            {getGreeting(hour)}
+          </Typography>
+          {getGreetingIcon(hour)}
+        </Stack>
+        <Typography variant="body2" color="text.secondary">
+          {getAffirmation(hour)}
+        </Typography>
+      </Box>
+
       <Stack
-        direction={{ xs: "column", sm: "row" }}
-        sx={{
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          margin: 3,
-        }}
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: "center", flexShrink: 0 }}
       >
-        
-        <Box sx={{ textAlign: "left" }}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <Typography variant="h1" sx={{ textTransform: "none" }}>
-              {getGreeting(hour)}
-            </Typography>
-            {getGreetingIcon(hour)}
-          </Stack>
+        {/* The phone's status bar already shows the time. */}
+        <Box sx={{ display: { xs: "none", sm: "block" } }}>
+          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+            {dateFormatted}
+          </Typography>
           <Typography variant="body2" color="text.secondary">
-            {getAffirmation(hour)}
+            {timeFormatted}
           </Typography>
         </Box>
-
-        <Box>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <Box>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {dateFormatted}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {timeFormatted}
-              </Typography>
-            </Box>
-            <IconButton onClick={() => dispatch(toggleTheme())} color="inherit">
-              {themeMode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
-            </IconButton>
-          </Stack>
-        </Box>
+        {/* Below md the navbar has this toggle, so don't show it twice. */}
         <IconButton
-          onClick={() => dispatch(toggleSidebar())}
-          sx={{ display: { xs: "inline-flex", md: "none" } }}
+          onClick={() => dispatch(toggleTheme())}
+          color="inherit"
+          aria-label="Toggle dark mode"
+          sx={{ display: { xs: "none", md: "inline-flex" } }}
         >
-          <HomeIcon />
+          {themeMode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
         </IconButton>
       </Stack>
-    </Box>
+    </Stack>
   );
 }
 

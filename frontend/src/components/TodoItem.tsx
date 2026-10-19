@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Checkbox,
   IconButton,
@@ -15,71 +14,18 @@ import {
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { toggleTodo, deleteTodo, updateTodo } from "../api/todos";
 import type { Todo } from "../api/todos";
-import { useOverBudgetWarning } from "../hooks/useOverBudgetWarning";
+import { useTodoActions } from "../hooks/useTodoActions";
 import { formatCurrency, parseCost } from "../utils/currency";
 import OverBudgetDialog from "./OverBudgetDialog";
 
 function TodoItem({ todo }: { todo: Todo }) {
-  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(todo.title);
   const [draftCost, setDraftCost] = useState(String(todo.estimatedCost));
-  const { saveWithWarning, dialogProps } = useOverBudgetWarning();
+  const { toggle, remove, saveEdit, dialogProps } = useTodoActions(todo);
   const parsedCost = parseCost(draftCost);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-
-  const toggleMutation = useMutation({
-    mutationFn: toggleTodo,
-    onMutate: async (todoBeingToggled) => {
-      await queryClient.cancelQueries({ queryKey: ["todos"] });
-      const previousTodos = queryClient.getQueryData<Todo[]>(["todos"]);
-      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
-        old?.map((t) =>
-          t.id === todoBeingToggled.id
-            ? { ...t, isComplete: !t.isComplete }
-            : t,
-        ),
-      );
-      return { previousTodos };
-    },
-    onError: (_err, _todo, context) => {
-      queryClient.setQueryData(["todos"], context?.previousTodos);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteTodo,
-    onMutate: async (idBeingDeleted) => {
-      await queryClient.cancelQueries({ queryKey: ["todos"] });
-      const previousTodos = queryClient.getQueryData<Todo[]>(["todos"]);
-      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
-        old?.filter((t) => t.id !== idBeingDeleted),
-      );
-      return { previousTodos };
-    },
-    onError: (_err, _id, context) => {
-      queryClient.setQueryData(["todos"], context?.previousTodos);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["spending"] });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (changes: { title: string; estimatedCost: number }) =>
-      updateTodo(todo, changes),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["spending"] });
-      setIsEditing(false);
-    },
-  });
 
   function startEditing() {
     setDraftTitle(todo.title);
@@ -90,17 +36,7 @@ function TodoItem({ todo }: { todo: Todo }) {
   function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (parsedCost === null) return;
-
-    const title = draftTitle.trim();
-    const estimatedCost = parsedCost;
-    if (!title || (title === todo.title && estimatedCost === todo.estimatedCost)) {
-      setIsEditing(false);
-      return;
-    }
-    // Only the increase counts toward the budget: editing $10 → $12 adds $2.
-    saveWithWarning(todo.categoryId, estimatedCost - todo.estimatedCost, () =>
-      updateMutation.mutate({ title, estimatedCost }),
-    );
+    saveEdit(draftTitle, parsedCost, () => setIsEditing(false));
   }
 
   return (
@@ -116,7 +52,7 @@ function TodoItem({ todo }: { todo: Todo }) {
       >
         <Checkbox
           checked={todo.isComplete}
-          onChange={() => toggleMutation.mutate(todo)}
+          onChange={toggle}
           sx={{ p: { xs: 0.5, sm: 1 }, flexShrink: 0 }}
         />
 
@@ -214,7 +150,7 @@ function TodoItem({ todo }: { todo: Todo }) {
             <IconButton
               size="small"
               color="error"
-              onClick={() => deleteMutation.mutate(todo.id)}
+              onClick={remove}
               aria-label="Delete item"
             >
               <DeleteIcon fontSize="small" />
@@ -245,7 +181,7 @@ function TodoItem({ todo }: { todo: Todo }) {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            deleteMutation.mutate(todo.id);
+            remove();
             setMenuAnchor(null);
           }}
         >
