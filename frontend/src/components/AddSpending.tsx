@@ -16,14 +16,11 @@ import { fetchCategories } from "../api/categories";
 import { createExpense } from "../api/expenses";
 import { formatCurrency } from "../utils/currency";
 import { useCurrentSpending } from "../hooks/useCurrentSpending";
+import { buildSavedMessage, type SavedMessage } from "../utils/spendingMessages";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { cancelSpendingDraft, finishSpendingDraft } from "../store/uiSlice";
 import { useDraftDetails } from "../hooks/useDraftDetails";
 
-interface SavedMessage {
-  text: string;
-  severity: "success" | "warning";
-}
 
 // Logs money actually paid. This, not the shopping list, is what "Spent" counts.
 function AddSpending() {
@@ -116,7 +113,7 @@ function AddSpending() {
       createExpense(categoryId as number, parsedAmount, note.trim()),
     onSuccess: (expense) => {
       // Read the totals before invalidating: they don't include this expense yet.
-      setSavedMessage(buildSavedMessage(expense.categoryId, expense.amount));
+      setSavedMessage(buildSavedMessage(spending, expense.categoryId, expense.amount));
       queryClient.invalidateQueries({ queryKey: ["spending"] });
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       // Keep the category: people often log several payments in a row for it.
@@ -126,27 +123,6 @@ function AddSpending() {
     },
   });
 
-  // Warns (doesn't block) when this payment puts the category over budget.
-  function buildSavedMessage(categoryId: number, amount: number): SavedMessage {
-    const category = spending?.categories.find(
-      (c) => c.categoryId === categoryId,
-    );
-    const added = `${formatCurrency(amount)} added to ${category?.name ?? "spending"}.`;
-    if (!category || category.budget <= 0)
-      return { text: added, severity: "success" };
-
-    const newSpent = category.spent + amount;
-    const overBy = newSpent - category.budget;
-    if (overBy <= 0) return { text: added, severity: "success" };
-
-    const wasAlreadyOver = category.spent > category.budget;
-    return {
-      severity: "warning",
-      text: wasAlreadyOver
-        ? `${added} ${category.name} is now ${formatCurrency(overBy)} over its ${formatCurrency(category.budget)} budget.`
-        : `${added} This puts ${category.name} ${formatCurrency(overBy)} over its ${formatCurrency(category.budget)} budget.`,
-    };
-  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

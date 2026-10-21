@@ -19,6 +19,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { deleteExpense, fetchExpenses, type Expense } from "../api/expenses";
 import { fetchCategories } from "../api/categories";
 import { formatCurrency } from "../utils/currency";
+import { parseISODate } from "../utils/dates";
 import { useCurrentSpending } from "../hooks/useCurrentSpending";
 import { findBudgetBreakers } from "../utils/overBudget";
 import EditSpendingDialog from "./EditSpendingDialog";
@@ -101,7 +102,7 @@ function RecentActivity() {
                     {formatCurrency(expense.amount)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {new Date(expense.createdAt).toLocaleDateString(undefined, {
+                    {parseISODate(expense.spentOn).toLocaleDateString(undefined, {
                       month: "short",
                       day: "numeric",
                     })}

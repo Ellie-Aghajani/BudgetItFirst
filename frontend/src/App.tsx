@@ -13,6 +13,7 @@ import MainContent from "./components/MainContent";
 import BudgetScreen from "./components/BudgetScreen";
 import DashboardScreen from "./components/DashboardScreen";
 import ReportsScreen from "./components/ReportsScreen";
+import SpendingCalendar from "./components/SpendingCalendar";
 import MonthRollover from "./components/MonthRollover";
 import LandingPage from "./components/LandingPage";
 import MobileNavbar from "./components/MobileNavbar";
@@ -93,6 +94,8 @@ function App() {
                 <BudgetScreen />
               ) : activeView === "reports" ? (
                 <ReportsScreen />
+              ) : activeView === "calendar" ? (
+                <SpendingCalendar />
               ) : (
                 <MainContent />
               )}

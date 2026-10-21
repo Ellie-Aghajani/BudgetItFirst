@@ -16,4 +16,18 @@ public static class BudgetMonths
         var difference = (year * 12 + month) - (now.Year * 12 + now.Month);
         return Math.Abs(difference) <= 1;
     }
+
+    // Today if it's in that month; otherwise the nearest day of it.
+    public static DateOnly DayWithin(int year, int month)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var first = new DateOnly(year, month, 1);
+        var last = first.AddMonths(1).AddDays(-1);
+        return today < first ? first : today > last ? last : today;
+    }
+
+    // Spending can't be dated in the future. One day of slack, because the
+    // client's local date can be a day ahead of UTC.
+    public static bool IsNotInFuture(DateOnly date) =>
+        date <= DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
 }

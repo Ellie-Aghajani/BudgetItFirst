@@ -1,3 +1,5 @@
+using TodoApi.Services;
+
 namespace TodoApi.Models;
 
 // Money actually spent, logged by the user. Shopping-list items only carry
@@ -19,20 +21,25 @@ public class Expense : AuditableEntity
     public int BudgetYear { get; private set; }
     public int BudgetMonth { get; private set; }
 
+    // The day the money was spent, chosen by the user (the calendar's "+").
+    // Always inside BudgetYear/BudgetMonth. CreatedAt is when it was logged,
+    // which can be days later.
+    public DateOnly SpentOn { get; private set; }
+
     private Expense() { }
 
-    public static Expense Create(string userId, int categoryId, decimal amount, int budgetYear, int budgetMonth, string? note = null)
+    public static Expense Create(string userId, int categoryId, decimal amount, DateOnly spentOn, string? note = null)
     {
         if (amount <= 0)
             throw new ArgumentException("Amount must be greater than zero.", nameof(amount));
-        return Build(userId, categoryId, amount, budgetYear, budgetMonth, note, isAdjustment: false);
+        return Build(userId, categoryId, amount, spentOn, note, isAdjustment: false);
     }
 
     public static Expense CreateAdjustment(string userId, int categoryId, decimal difference, int budgetYear, int budgetMonth)
     {
         if (difference == 0)
             throw new ArgumentException("An adjustment must change the total.", nameof(difference));
-        return Build(userId, categoryId, difference, budgetYear, budgetMonth, note: null, isAdjustment: true);
+        return Build(userId, categoryId, difference, BudgetMonths.DayWithin(budgetYear, budgetMonth), note: null, isAdjustment: true);
     }
 
     // Adjustments aren't edited directly: they're the difference between
@@ -60,20 +67,30 @@ public class Expense : AuditableEntity
         Touch();
     }
 
+    // Moves the expense to another day of the same budget month. Moving it
+    // to another month would change a month that may already be reported on.
+    public void MoveToDate(DateOnly newDate)
+    {
+        EnsureNotAdjustment();
+        if (newDate.Year != BudgetYear || newDate.Month != BudgetMonth)
+            throw new ArgumentException("The date must stay in the same month.", nameof(newDate));
+        SpentOn = newDate;
+        Touch();
+    }
+
     private void EnsureNotAdjustment()
     {
         if (IsAdjustment)
             throw new InvalidOperationException("Adjustments can't be edited.");
     }
 
-    private static Expense Build(string userId, int categoryId, decimal amount, int budgetYear, int budgetMonth, string? note, bool isAdjustment)
+    // The budget month comes from the date, so the two can never disagree.
+    private static Expense Build(string userId, int categoryId, decimal amount, DateOnly spentOn, string? note, bool isAdjustment)
     {
         if (string.IsNullOrWhiteSpace(userId))
             throw new ArgumentException("UserId is required.", nameof(userId));
-        if (budgetMonth < 1 || budgetMonth > 12)
-            throw new ArgumentException("Budget month must be between 1 and 12.", nameof(budgetMonth));
-        if (budgetYear < 2000 || budgetYear > 2100)
-            throw new ArgumentException("Budget year is out of range.", nameof(budgetYear));
+        if (spentOn.Year < 2000 || spentOn.Year > 2100)
+            throw new ArgumentException("Date is out of range.", nameof(spentOn));
 
         return new Expense
         {
@@ -82,8 +99,9 @@ public class Expense : AuditableEntity
             Amount = amount,
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
             IsAdjustment = isAdjustment,
-            BudgetYear = budgetYear,
-            BudgetMonth = budgetMonth
+            BudgetYear = spentOn.Year,
+            BudgetMonth = spentOn.Month,
+            SpentOn = spentOn
         };
     }
 }

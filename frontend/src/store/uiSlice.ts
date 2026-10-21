@@ -3,7 +3,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 
 export type Filter = "all" | "active" | "completed";
 export type Theme = "light" | "dark";
-export type View = "dashboard" | "tasks" | "budget" | "reports";
+export type View = "dashboard" | "tasks" | "budget" | "reports" | "calendar";
 
 const AFFIRMATION_KEY = "todo-app-affirmation";
 const THEME_KEY = "budget-theme";

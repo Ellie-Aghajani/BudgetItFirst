@@ -27,6 +27,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { fetchTodos, deleteAllTodos } from "../api/todos";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
@@ -128,6 +129,19 @@ function Sidebar() {
               <AccountBalanceWalletIcon />
             </ListItemIcon>
             <ListItemText primary="Budget" />
+          </ListItemButton>
+
+          <ListItemButton
+            selected={activeView === "calendar"}
+            onClick={() => {
+              dispatch(setActiveView("calendar"));
+              dispatch(closeSidebar());
+            }}
+          >
+            <ListItemIcon>
+              <CalendarMonthIcon />
+            </ListItemIcon>
+            <ListItemText primary="Spending Calendar" />
           </ListItemButton>
 
           <ListItemButton

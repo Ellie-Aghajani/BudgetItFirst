@@ -28,13 +28,17 @@ public class ExpensesController : ControllerBase
 
         var expenses = await _context.Expenses
             .Where(e => e.UserId == CurrentUserId && e.BudgetYear == year && e.BudgetMonth == month)
-            .OrderByDescending(e => e.CreatedAt)
+            .OrderByDescending(e => e.SpentOn)
+            .ThenByDescending(e => e.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
         return Ok(expenses);
     }
 
-    public record CreateExpenseRequest(int CategoryId, decimal Amount, int BudgetYear, int BudgetMonth, string? Note = null);
+    // SpentOn is optional: without it the expense is dated today (or the
+    // nearest day of the budget month).
+    public record CreateExpenseRequest(
+        int CategoryId, decimal Amount, int BudgetYear, int BudgetMonth, string? Note = null, DateOnly? SpentOn = null);
 
     [HttpPost]
     public async Task<ActionResult<Expense>> Create(CreateExpenseRequest request)
@@ -44,10 +48,13 @@ public class ExpensesController : ControllerBase
             return BadRequest("Spending can only be added to the current month.");
         if (request.Amount <= 0) return BadRequest("Amount must be greater than zero.");
         if (request.Note?.Length > 200) return BadRequest("Note is too long.");
+        var spentOn = request.SpentOn ?? BudgetMonths.DayWithin(request.BudgetYear, request.BudgetMonth);
+        if (spentOn.Year != request.BudgetYear || spentOn.Month != request.BudgetMonth)
+            return BadRequest("The date must be in the budget month.");
+        if (!BudgetMonths.IsNotInFuture(spentOn)) return BadRequest("Spending can't be dated in the future.");
         if (!await IsActiveCategoryAsync(request.CategoryId)) return BadRequest("Category not found.");
 
-        var expense = Expense.Create(
-            CurrentUserId, request.CategoryId, request.Amount, request.BudgetYear, request.BudgetMonth, request.Note);
+        var expense = Expense.Create(CurrentUserId, request.CategoryId, request.Amount, spentOn, request.Note);
         _context.Expenses.Add(expense);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetAll), new { id = expense.Id }, expense);
@@ -83,7 +90,7 @@ public class ExpensesController : ControllerBase
         return NoContent();
     }
 
-    public record UpdateExpenseRequest(int CategoryId, decimal Amount, string? Note = null);
+    public record UpdateExpenseRequest(int CategoryId, decimal Amount, string? Note = null, DateOnly? SpentOn = null);
 
     [HttpPut("{id}")]
     public async Task<ActionResult<Expense>> Update(int id, UpdateExpenseRequest request)
@@ -97,12 +104,19 @@ public class ExpensesController : ControllerBase
         if (request.Note?.Length > 200) return BadRequest("Note is too long.");
         if (request.CategoryId != expense.CategoryId && !await IsActiveCategoryAsync(request.CategoryId))
             return BadRequest("Category not found.");
+        if (request.SpentOn is { } date && date != expense.SpentOn)
+        {
+            if (date.Year != expense.BudgetYear || date.Month != expense.BudgetMonth)
+                return BadRequest("The date must stay in the same month.");
+            if (!BudgetMonths.IsNotInFuture(date)) return BadRequest("Spending can't be dated in the future.");
+        }
 
         // Only call what changed, so UpdatedAt means something.
         if (request.Amount != expense.Amount) expense.UpdateAmount(request.Amount);
         var newNote = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         if (newNote != expense.Note) expense.UpdateNote(newNote);
         if (request.CategoryId != expense.CategoryId) expense.MoveToCategory(request.CategoryId);
+        if (request.SpentOn is { } newDate && newDate != expense.SpentOn) expense.MoveToDate(newDate);
 
         await _context.SaveChangesAsync();
         return Ok(expense);
