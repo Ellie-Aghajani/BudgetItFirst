@@ -12,6 +12,12 @@ import "./index.css";
 import App from "./App.tsx";
 import AuthListener from "./components/AuthListener.tsx";
 
+// Wake the API (and its database) as soon as the app opens. On free hosting
+// both go to sleep when idle and take a while to start; this way they start
+// while the user is still typing their password. Fire-and-forget: the
+// response doesn't matter, and a failure here is harmless.
+fetch(`${import.meta.env.VITE_API_URL}/api/health`).catch(() => {});
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(

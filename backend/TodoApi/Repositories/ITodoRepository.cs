@@ -4,7 +4,8 @@ namespace TodoApi.Repositories;
 
 public interface ITodoRepository
 {
-    Task<IEnumerable<Todo>> GetAllAsync();
+    Task<List<Todo>> GetForUserAsync(string userId, int? budgetYear, int? budgetMonth);
+    Task DeleteForUserAsync(string userId, int? budgetYear, int? budgetMonth);
     Task<Todo?> GetByIdAsync(int id);
     Task AddAsync(Todo todo);
     Task DeleteAsync(int id);

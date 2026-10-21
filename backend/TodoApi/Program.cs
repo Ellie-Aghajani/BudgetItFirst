@@ -73,4 +73,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// No auth, no user data: just "is the API up, and can it reach the database?"
+// The frontend calls it as soon as the app opens, so a sleeping server and
+// database start waking up while the user is still signing in.
+app.MapGet("/api/health", async (AppDbContext db) =>
+    await db.Database.CanConnectAsync() ? Results.Ok("ok") : Results.StatusCode(503));
+
 app.Run();

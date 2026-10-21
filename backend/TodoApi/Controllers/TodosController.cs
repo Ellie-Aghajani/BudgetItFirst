@@ -30,13 +30,7 @@ public class TodosController : ControllerBase
     {
         if (CurrentUserId == null) return Unauthorized();
 
-        var todos = await _repository.GetAllAsync();
-        var userTodos = todos.Where(t => t.UserId == CurrentUserId);
-        if (year.HasValue && month.HasValue)
-        {
-            userTodos = userTodos.Where(t => t.BudgetYear == year && t.BudgetMonth == month);
-        }
-        return Ok(userTodos);
+        return Ok(await _repository.GetForUserAsync(CurrentUserId, year, month));
     }
 
     [HttpGet("{id}")]
@@ -143,17 +137,7 @@ public class TodosController : ControllerBase
     {
         if (CurrentUserId == null) return Unauthorized();
 
-        var todos = await _repository.GetAllAsync();
-        var userTodos = todos.Where(t => t.UserId == CurrentUserId);
-        if (year.HasValue && month.HasValue)
-        {
-            userTodos = userTodos.Where(t => t.BudgetYear == year && t.BudgetMonth == month);
-        }
-        foreach (var todo in userTodos)
-        {
-            await _repository.DeleteAsync(todo.Id);
-        }
-        await _repository.SaveChangesAsync();
+        await _repository.DeleteForUserAsync(CurrentUserId, year, month);
         return NoContent();
     }
 }

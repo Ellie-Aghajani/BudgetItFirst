@@ -13,9 +13,29 @@ public class TodoRepository : ITodoRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Todo>> GetAllAsync()
+    // Filters in SQL (WHERE UserId = ... AND BudgetYear = ...), so it uses the
+    // (UserId, BudgetYear, BudgetMonth) index and only this user's rows come
+    // back, instead of loading every user's todos and filtering in memory.
+    public async Task<List<Todo>> GetForUserAsync(string userId, int? budgetYear, int? budgetMonth)
     {
-        return await _context.Todos.AsNoTracking().ToListAsync();
+        return await ForUser(userId, budgetYear, budgetMonth).AsNoTracking().ToListAsync();
+    }
+
+    // One DELETE statement in the database. The old way loaded the rows, then
+    // looked each one up again before removing it: one round trip per item.
+    public async Task DeleteForUserAsync(string userId, int? budgetYear, int? budgetMonth)
+    {
+        await ForUser(userId, budgetYear, budgetMonth).ExecuteDeleteAsync();
+    }
+
+    private IQueryable<Todo> ForUser(string userId, int? budgetYear, int? budgetMonth)
+    {
+        var query = _context.Todos.Where(t => t.UserId == userId);
+        if (budgetYear.HasValue && budgetMonth.HasValue)
+        {
+            query = query.Where(t => t.BudgetYear == budgetYear && t.BudgetMonth == budgetMonth);
+        }
+        return query;
     }
 
     public async Task<Todo?> GetByIdAsync(int id)
