@@ -14,7 +14,7 @@ import BudgetScreen from "./components/BudgetScreen";
 import DashboardScreen from "./components/DashboardScreen";
 import ReportsScreen from "./components/ReportsScreen";
 import MonthRollover from "./components/MonthRollover";
-import AuthScreen from "./components/AuthScreen";
+import LandingPage from "./components/LandingPage";
 import MobileNavbar from "./components/MobileNavbar";
 import SpendPrompt from "./components/SpendPrompt";
 
@@ -33,6 +33,7 @@ function App() {
   const theme = useMemo(() => getTheme(mode), [mode]);
   const { uid, isLoading } = useAppSelector((state) => state.auth);
   const activeView = useAppSelector((state) => state.ui.activeView);
+  const dataResetCount = useAppSelector((state) => state.ui.dataResetCount);
 
   return (
     <ThemeProvider theme={theme}>
@@ -50,7 +51,9 @@ function App() {
           <CircularProgress />
         </Box>
       ) : uid === null ? (
-        <AuthScreen />
+        // Everyone who isn't signed in starts here: what the app is, how
+        // to use it, and the way in.
+        <LandingPage />
       ) : (
         <Box
           sx={{
@@ -74,6 +77,9 @@ function App() {
             <MobileNavbar />
             <Box
               component="main"
+              // New key after "Clear all data": the screen remounts, so no
+              // half-finished form or old selection survives the reset.
+              key={dataResetCount}
               sx={{
                 flexGrow: 1,
                 minWidth: 0,

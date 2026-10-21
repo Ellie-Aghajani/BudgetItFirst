@@ -2,10 +2,14 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  getAdditionalUserInfo,
   GoogleAuthProvider,
   sendPasswordResetEmail,
   signOut,
   updateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
 } from "firebase/auth";
 import { auth } from "../firebase";
 
@@ -34,9 +38,13 @@ export async function updateDisplayName(name: string) {
   await updateProfile(auth.currentUser, { displayName: name.trim() });
 }
 
+// isNewUser: true the first time this Google account signs in here.
 export async function signInWithGoogle() {
   const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+  return {
+    user: result.user,
+    isNewUser: getAdditionalUserInfo(result)?.isNewUser ?? false,
+  };
 }
 
 export async function resetPassword(email: string) {
@@ -45,4 +53,31 @@ export async function resetPassword(email: string) {
 
 export async function signOutUser() {
   await signOut(auth);
+}
+
+// "password" for email sign-ups, "google.com" for Google.
+export function getSignInMethod(): "password" | "google.com" | null {
+  const providerId = auth.currentUser?.providerData[0]?.providerId;
+  return providerId === "password" || providerId === "google.com"
+    ? providerId
+    : null;
+}
+
+// Confirms it's really the user before something irreversible: password
+// accounts re-enter their password, Google accounts go through Google again.
+// Then forces a fresh ID token, so the server sees the new sign-in time.
+export async function reauthenticate(password?: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not signed in.");
+
+  if (getSignInMethod() === "password") {
+    if (!user.email || !password) throw new Error("Enter your password.");
+    await reauthenticateWithCredential(
+      user,
+      EmailAuthProvider.credential(user.email, password),
+    );
+  } else {
+    await reauthenticateWithPopup(user, googleProvider);
+  }
+  await user.getIdToken(true);
 }

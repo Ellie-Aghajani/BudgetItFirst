@@ -10,6 +10,7 @@ import {
   Link,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
   signInWithEmail,
   signUpWithEmail,
@@ -18,11 +19,19 @@ import {
 } from "../api/auth";
 import { useAppDispatch } from "../store/hooks";
 import { setDisplayName } from "../store/authSlice";
+import { setActiveView } from "../store/uiSlice";
 
-type Mode = "signIn" | "signUp" | "resetPassword";
+export type AuthMode = "signIn" | "signUp" | "resetPassword";
+type Mode = AuthMode;
 
-function AuthScreen() {
-  const [mode, setMode] = useState<Mode>("signIn");
+function AuthScreen({
+  initialMode = "signIn",
+  onBack,
+}: {
+  initialMode?: AuthMode;
+  onBack?: () => void;
+}) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const dispatch = useAppDispatch();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,6 +52,9 @@ function AuthScreen() {
         // Firebase reports the new user before the name is saved, so pass
         // the name along directly for the greeting.
         dispatch(setDisplayName(name.trim()));
+        // A new account has nothing yet: start on the Budget page to set
+        // income and plan categories.
+        dispatch(setActiveView("budget"));
       } else if (mode === "resetPassword") {
         await resetPassword(email);
         setInfoMessage("Password reset email sent — check your inbox.");
@@ -57,7 +69,8 @@ function AuthScreen() {
   async function handleGoogleSignIn() {
     setErrorMessage(null);
     try {
-      await signInWithGoogle();
+      const { isNewUser } = await signInWithGoogle();
+      if (isNewUser) dispatch(setActiveView("budget"));
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : "Something went wrong.",
@@ -73,9 +86,20 @@ function AuthScreen() {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "background.default",
+        padding: 2,
       }}
     >
-      <Card sx={{ padding: 4, width: "100%", maxWidth: 420 }}>
+      <Card sx={{ padding: { xs: 3, sm: 4 }, width: "100%", maxWidth: 420 }}>
+        {onBack && (
+          <Button
+            size="small"
+            startIcon={<ArrowBackIcon />}
+            onClick={onBack}
+            sx={{ marginLeft: -1, marginBottom: 1 }}
+          >
+            Back
+          </Button>
+        )}
         <Stack spacing={1} sx={{ marginBottom: 3 }}>
           <Typography
             variant="overline"

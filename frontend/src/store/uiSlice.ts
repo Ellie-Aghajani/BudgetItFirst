@@ -83,6 +83,11 @@ interface UiState {
   unloggedTodoIds: number[];
   // The user said yes: Add Spending shows these details until saved or cancelled.
   spendingDraft: SpendingDraft | null;
+  // Bumped by "Clear all data". App keys the screens with it, so every
+  // screen remounts and starts fresh, like for a brand-new user.
+  dataResetCount: number;
+  // A message for the landing page after the user is signed out.
+  authNotice: "accountDeleted" | null;
 }
 
 const initialState: UiState = {
@@ -97,6 +102,8 @@ const initialState: UiState = {
   planEditorRequest: null,
   spendPrompt: null,
   spendingDraft: null,
+  dataResetCount: 0,
+  authNotice: null,
   unloggedTodoIds: loadUnlogged(),
 };
 
@@ -252,6 +259,22 @@ const uiSlice = createSlice({
       state.spendingDraft = null;
     },
     // Cancelled: the items are still bought but not logged.
+    // After "Clear all data": forget anything that pointed at the old data.
+    resetLocalData: (state) => {
+      state.selectedCategoryId = null;
+      state.highlightedCategoryId = null;
+      state.spendPrompt = null;
+      state.spendingDraft = null;
+      state.unloggedTodoIds = [];
+      saveUnlogged([]);
+      state.planEditorRequest = null;
+      // Start over where a new user starts: setting income and a plan.
+      state.activeView = "budget";
+      state.dataResetCount += 1;
+    },
+    setAuthNotice: (state, action: PayloadAction<UiState["authNotice"]>) => {
+      state.authNotice = action.payload;
+    },
     cancelSpendingDraft: (state) => {
       if (state.spendingDraft) markUnlogged(state, state.spendingDraft.todoIds);
       state.spendingDraft = null;
@@ -277,5 +300,7 @@ export const {
   acceptSpendPrompt,
   finishSpendingDraft,
   cancelSpendingDraft,
+  resetLocalData,
+  setAuthNotice,
 } = uiSlice.actions;
 export default uiSlice.reducer;

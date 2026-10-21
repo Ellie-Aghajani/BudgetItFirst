@@ -32,6 +32,7 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
 import type { Filter } from "../store/uiSlice";
 import { signOutUser } from "../api/auth";
+import AccountSettings from "./AccountSettings";
 
 const DRAWER_WIDTH = 260;
 
@@ -169,14 +170,8 @@ function Sidebar() {
       </Box>
 
       <Box sx={{ marginTop: "auto", padding: 3 }}>
-        {email && (
-          <Typography
-            variant="body2"
-            sx={{ marginBottom: 1, wordBreak: "break-word", opacity: 0.7 }}
-          >
-            {email}
-          </Typography>
-        )}
+        {/* Email with a gear for Clear all data / Delete account. */}
+        <AccountSettings email={email} />
 
         <Button
           variant="outlined"
