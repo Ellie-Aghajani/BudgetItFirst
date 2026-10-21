@@ -12,15 +12,10 @@ export async function clearAllData(): Promise<void> {
   }
 }
 
-// Deletes the data and the account. Call reauthenticate() first: the server
-// only accepts this right after a fresh sign-in.
+// Deletes the data and the account.
 export async function deleteAccount(): Promise<void> {
   const response = await fetchWithAuth(BASE_URL, { method: "DELETE" });
   if (!response.ok) {
-    throw new Error(
-      response.status === 403
-        ? "Please confirm your sign-in again, then retry."
-        : "Couldn't delete your account. Please try again.",
-    );
+    throw new Error("Couldn't delete your account. Please try again.");
   }
 }

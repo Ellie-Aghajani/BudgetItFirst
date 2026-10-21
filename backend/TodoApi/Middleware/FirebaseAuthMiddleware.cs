@@ -27,12 +27,6 @@ public class FirebaseAuthMiddleware
             {
                 var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(idToken);
                 context.Items["UserId"] = decodedToken.Uid;
-                // When the user last actually signed in (not when the token
-                // was refreshed). Account deletion requires it to be recent.
-                if (decodedToken.Claims.TryGetValue("auth_time", out var authTime))
-                {
-                    context.Items["AuthTime"] = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(authTime));
-                }
             }
             catch (FirebaseAuthException)
             {

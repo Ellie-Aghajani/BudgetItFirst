@@ -19,7 +19,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { clearAllData, deleteAccount } from "../api/account";
-import { getSignInMethod, reauthenticate, signOutUser } from "../api/auth";
+import { signOutUser } from "../api/auth";
 import { useAppDispatch } from "../store/hooks";
 import { resetLocalData, setAuthNotice } from "../store/uiSlice";
 
@@ -47,27 +47,25 @@ function ConfirmDialog({
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const [typed, setTyped] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const isDelete = action === "delete";
-  const usesPassword = getSignInMethod() === "password";
-  const canConfirm =
-    typed === CONFIRM_WORD && (!isDelete || !usesPassword || password !== "");
+  // Typing the word is the safety check: it can't happen by a stray click.
+  const canConfirm = typed === CONFIRM_WORD;
 
   async function handleConfirm() {
     setIsWorking(true);
     setError(null);
     try {
       if (isDelete) {
-        await reauthenticate(usesPassword ? password : undefined);
         await deleteAccount();
         clearLocalLeftovers();
         dispatch(resetLocalData());
         queryClient.clear();
         // Shown on the landing page the user lands on next.
         dispatch(setAuthNotice("accountDeleted"));
-        // The Firebase user is gone; signing out clears the local session.
+        // The Firebase user is gone; signing out clears the local session,
+        // and App shows the landing page to anyone who isn't signed in.
         await signOutUser();
       } else {
         await clearAllData();
@@ -106,22 +104,6 @@ function ConfirmDialog({
           This can't be undone.
         </DialogContentText>
         <Stack spacing={2}>
-          {isDelete && usesPassword && (
-            <TextField
-              label="Your password"
-              type="password"
-              size="small"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              fullWidth
-            />
-          )}
-          {isDelete && !usesPassword && (
-            <Typography variant="body2" color="text.secondary">
-              You'll be asked to confirm with Google.
-            </Typography>
-          )}
           <TextField
             label={`Type ${CONFIRM_WORD} to confirm`}
             size="small"
