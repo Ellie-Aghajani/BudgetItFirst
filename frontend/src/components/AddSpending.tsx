@@ -16,11 +16,15 @@ import { fetchCategories } from "../api/categories";
 import { createExpense } from "../api/expenses";
 import { formatCurrency } from "../utils/currency";
 import { useCurrentSpending } from "../hooks/useCurrentSpending";
-import { buildSavedMessage, type SavedMessage } from "../utils/spendingMessages";
+import {
+  buildSavedMessage,
+  type SavedMessage,
+} from "../utils/spendingMessages";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { cancelSpendingDraft, finishSpendingDraft } from "../store/uiSlice";
 import { useDraftDetails } from "../hooks/useDraftDetails";
-
+import SpentOnField from "./SpentOnField";
+import { isSpendableDate, toISODate } from "../utils/dates";
 
 // Logs money actually paid. This, not the shopping list, is what "Spent" counts.
 function AddSpending() {
@@ -28,6 +32,11 @@ function AddSpending() {
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  // null = today. Most spending is logged the day it happens, so the field
+  // starts there; it's worked out at render time, so a tab left open past
+  // midnight still shows the right day.
+  const [spentOn, setSpentOn] = useState<string | null>(null);
+  const dateValue = spentOn ?? toISODate(new Date());
   const [savedMessage, setSavedMessage] = useState<SavedMessage | null>(null);
   const dispatch = useAppDispatch();
   // Set when the user checked off a shopping item and chose "Add spending".
@@ -106,23 +115,27 @@ function AddSpending() {
   // Unlike an estimate, a payment of $0 means nothing, so it must be above 0.
   const isAmountValid =
     amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount > 0;
-  const canSave = categoryId !== "" && isAmountValid;
+  const canSave =
+    categoryId !== "" && isAmountValid && isSpendableDate(dateValue);
 
   const addMutation = useMutation({
     mutationFn: () =>
-      createExpense(categoryId as number, parsedAmount, note.trim()),
+      createExpense(categoryId as number, parsedAmount, note.trim(), dateValue),
     onSuccess: (expense) => {
       // Read the totals before invalidating: they don't include this expense yet.
-      setSavedMessage(buildSavedMessage(spending, expense.categoryId, expense.amount));
+      setSavedMessage(
+        buildSavedMessage(spending, expense.categoryId, expense.amount),
+      );
       queryClient.invalidateQueries({ queryKey: ["spending"] });
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       // Keep the category: people often log several payments in a row for it.
       setAmount("");
       setNote("");
+      // Back to today, so the next entry isn't backdated by accident.
+      setSpentOn(null);
       dispatch(finishSpendingDraft());
     },
   });
-
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -234,6 +247,7 @@ function AddSpending() {
               }}
               sx={{ minWidth: 140 }}
             />
+            <SpentOnField value={dateValue} onChange={setSpentOn} />
             <TextField
               label="Note (optional)"
               size="small"

@@ -15,13 +15,15 @@ import {
 import { fetchCategories } from "../api/categories";
 import { createExpense } from "../api/expenses";
 import { useCurrentSpending } from "../hooks/useCurrentSpending";
-import { parseISODate } from "../utils/dates";
+import SpentOnField from "./SpentOnField";
+import { isSpendableDate } from "../utils/dates";
 import {
   buildSavedMessage,
   type SavedMessage,
 } from "../utils/spendingMessages";
 
-// Logs spending on a specific day, from the calendar's "+".
+// Logs spending from the calendar. Starts on the day the user clicked, and
+// the date can still be changed in the form.
 function AddSpendingDialog({
   date,
   onClose,
@@ -35,6 +37,7 @@ function AddSpendingDialog({
   const [categoryId, setCategoryId] = useState<number | "">("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [spentOn, setSpentOn] = useState(date);
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
@@ -45,11 +48,12 @@ function AddSpendingDialog({
   const parsedAmount = Number(amount);
   const isAmountValid =
     amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount > 0;
-  const canSave = categoryId !== "" && isAmountValid;
+  const canSave =
+    categoryId !== "" && isAmountValid && isSpendableDate(spentOn);
 
   const saveMutation = useMutation({
     mutationFn: () =>
-      createExpense(categoryId as number, parsedAmount, note.trim(), date),
+      createExpense(categoryId as number, parsedAmount, note.trim(), spentOn),
     onSuccess: (expense) => {
       // Totals from before the save, so the over-budget check is right.
       onSaved(buildSavedMessage(spending, expense.categoryId, expense.amount));
@@ -65,16 +69,10 @@ function AddSpendingDialog({
     saveMutation.mutate();
   }
 
-  const title = parseISODate(date).toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>Add spending · {title}</DialogTitle>
+        <DialogTitle>Add spending</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ paddingTop: 1 }}>
             {categories?.length === 0 ? (
@@ -119,6 +117,7 @@ function AddSpendingDialog({
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
             />
+            <SpentOnField value={spentOn} onChange={setSpentOn} />
             {saveMutation.isError && (
               <Alert severity="error">{saveMutation.error.message}</Alert>
             )}

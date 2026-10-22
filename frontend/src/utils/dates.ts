@@ -27,3 +27,19 @@ export function startOfWeek(date: Date): Date {
 export function isSameDay(a: Date, b: Date): boolean {
   return toISODate(a) === toISODate(b);
 }
+
+export function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+// The days spending can be logged on: this month, up to today. Earlier
+// months are closed into their reports, and the future hasn't happened.
+// ISO strings ("YYYY-MM-DD") compare correctly as plain text.
+export function getSpendableRange(today = new Date()) {
+  return { min: toISODate(startOfMonth(today)), max: toISODate(today) };
+}
+
+export function isSpendableDate(value: string): boolean {
+  const { min, max } = getSpendableRange();
+  return value >= min && value <= max;
+}
