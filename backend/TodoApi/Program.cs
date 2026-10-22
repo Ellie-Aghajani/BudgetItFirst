@@ -60,6 +60,11 @@ builder.Services.AddScoped<RequestAuditor>();
 
 var app = builder.Build();
 app.UseCors("AllowFrontendDev");
+// "/" shows wwwroot/index.html: what this server is and how to use the app.
+// Before the auth middleware, so a public page doesn't verify tokens.
+// UseDefaultFiles only rewrites "/" to "/index.html"; UseStaticFiles serves it.
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseMiddleware<FirebaseAuthMiddleware>();
 
 // Configure the HTTP request pipeline.

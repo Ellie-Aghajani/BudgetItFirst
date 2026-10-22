@@ -18,6 +18,7 @@ import MonthRollover from "./components/MonthRollover";
 import LandingPage from "./components/LandingPage";
 import MobileNavbar from "./components/MobileNavbar";
 import SpendPrompt from "./components/SpendPrompt";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function App() {
   const dispatch = useAppDispatch();
@@ -88,17 +89,22 @@ function App() {
                 boxSizing: "border-box",
               }}
             >
-              {activeView === "dashboard" ? (
-                <DashboardScreen />
-              ) : activeView === "budget" ? (
-                <BudgetScreen />
-              ) : activeView === "reports" ? (
-                <ReportsScreen />
-              ) : activeView === "calendar" ? (
-                <SpendingCalendar />
-              ) : (
-                <MainContent />
-              )}
+              {/* A crash in one screen shows a message there; the sidebar
+                  stays usable. Keyed by view, so moving to another screen
+                  starts it fresh. */}
+              <ErrorBoundary key={activeView}>
+                {activeView === "dashboard" ? (
+                  <DashboardScreen />
+                ) : activeView === "budget" ? (
+                  <BudgetScreen />
+                ) : activeView === "reports" ? (
+                  <ReportsScreen />
+                ) : activeView === "calendar" ? (
+                  <SpendingCalendar />
+                ) : (
+                  <MainContent />
+                )}
+              </ErrorBoundary>
             </Box>
           </Box>
         </Box>

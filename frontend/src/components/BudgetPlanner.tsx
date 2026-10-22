@@ -114,7 +114,14 @@ function PlanLegendRow({
 // The % column repeats what Suggested $ shows, so phones drop it to fit.
 const HIDE_ON_PHONE = { display: { xs: "none", sm: "table-cell" } };
 
-function BudgetPlanner({ monthlyIncome }: { monthlyIncome: number }) {
+function BudgetPlanner({
+  monthlyIncome,
+  onExpandedChange,
+}: {
+  monthlyIncome: number;
+  // Tells the page when the editor is open, so it can give it the full width.
+  onExpandedChange?: (isExpanded: boolean) => void;
+}) {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const mode = useAppSelector((state) => state.ui.theme);
@@ -265,6 +272,12 @@ function BudgetPlanner({ monthlyIncome }: { monthlyIncome: number }) {
   }));
 
   const hasSavedPlan = (categories?.length ?? 0) > 0;
+  // The editor shows for a first-time setup or after Edit. Waits for the
+  // categories to load, so a saved plan doesn't flash as "expanded".
+  const isExpanded = isEditing || (!isLoading && !hasSavedPlan);
+  useEffect(() => {
+    onExpandedChange?.(isExpanded);
+  }, [isExpanded, onExpandedChange]);
 
   // Adding to a saved plan: new categories are budgeted from the money not
   // yet assigned, and can't take more than that. (A first-time setup keeps

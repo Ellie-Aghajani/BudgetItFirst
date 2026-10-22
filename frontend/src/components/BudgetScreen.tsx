@@ -15,7 +15,10 @@ import {
 } from "@mui/material";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import EditIcon from "@mui/icons-material/Edit";
-import { fetchBudgetSettings, updateMonthlyIncome } from "../api/budgetSettings";
+import {
+  fetchBudgetSettings,
+  updateMonthlyIncome,
+} from "../api/budgetSettings";
 import Header from "./Header";
 import CategoryBudgetTable from "./CategoryBudgetTable";
 import { formatCurrency } from "../utils/currency";
@@ -27,8 +30,14 @@ function BudgetScreen() {
   const [draftIncome, setDraftIncome] = useState<string | null>(null);
   const [isSavedMessageOpen, setIsSavedMessageOpen] = useState(false);
   const [isEditingIncome, setIsEditingIncome] = useState(false);
+  // While the plan editor is open it needs the full width for its table.
+  const [isPlanExpanded, setIsPlanExpanded] = useState(false);
 
-  const { data: settings, isLoading, isError } = useQuery({
+  const {
+    data: settings,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["budgetSettings"],
     queryFn: fetchBudgetSettings,
   });
@@ -46,8 +55,12 @@ function BudgetScreen() {
 
   const inputValue = draftIncome ?? String(settings?.monthlyIncome ?? "");
   const parsedIncome = Number(inputValue);
-  const isValid = inputValue.trim() !== "" && Number.isFinite(parsedIncome) && parsedIncome >= 0;
-  const hasChanges = draftIncome !== null && parsedIncome !== settings?.monthlyIncome;
+  const isValid =
+    inputValue.trim() !== "" &&
+    Number.isFinite(parsedIncome) &&
+    parsedIncome >= 0;
+  const hasChanges =
+    draftIncome !== null && parsedIncome !== settings?.monthlyIncome;
   // A saved income shows as plain text; the form is for first-time setup or after Edit.
   const hasSavedIncome = (settings?.monthlyIncome ?? 0) > 0;
   const showIncomeForm = !hasSavedIncome || isEditingIncome;
@@ -65,11 +78,23 @@ function BudgetScreen() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%", minWidth: 0 }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 3,
+        width: "100%",
+        minWidth: 0,
+      }}
+    >
       <Header />
 
       <Card sx={{ padding: { xs: 2, sm: 3 }, maxWidth: 520 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center", marginBottom: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: "center", marginBottom: 2 }}
+        >
           <AccountBalanceWalletIcon color="primary" />
           <Typography variant="h2" sx={{ textTransform: "none" }}>
             Monthly Budget
@@ -90,13 +115,20 @@ function BudgetScreen() {
                 {formatCurrency(settings!.monthlyIncome)}
               </Typography>
             </Box>
-            <IconButton onClick={() => setIsEditingIncome(true)} aria-label="Edit monthly income">
+            <IconButton
+              onClick={() => setIsEditingIncome(true)}
+              aria-label="Edit monthly income"
+            >
               <EditIcon />
             </IconButton>
           </Stack>
         ) : (
           <form onSubmit={handleSubmit}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "flex-start" } }}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              sx={{ alignItems: { sm: "flex-start" } }}
+            >
               <TextField
                 label="Monthly Income"
                 type="number"
@@ -104,11 +136,17 @@ function BudgetScreen() {
                 value={inputValue}
                 onChange={(e) => setDraftIncome(e.target.value)}
                 error={!isValid}
-                helperText={isValid ? "Your total take-home income per month." : "Enter an amount of 0 or more."}
+                helperText={
+                  isValid
+                    ? "Your total take-home income per month."
+                    : "Enter an amount of 0 or more."
+                }
                 fullWidth
                 slotProps={{
                   input: {
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: (
+                      <InputAdornment position="start">$</InputAdornment>
+                    ),
                   },
                   htmlInput: { min: 0, step: "0.01" },
                 }}
@@ -121,7 +159,10 @@ function BudgetScreen() {
                 Save
               </Button>
               {hasSavedIncome && (
-                <Button onClick={cancelIncomeEdit} disabled={saveMutation.isPending}>
+                <Button
+                  onClick={cancelIncomeEdit}
+                  disabled={saveMutation.isPending}
+                >
                   Cancel
                 </Button>
               )}
@@ -136,19 +177,27 @@ function BudgetScreen() {
         )}
       </Card>
 
-      {/* Side by side from lg (1024px) up. Below that, each half would be too
-          narrow for its table, so they stack. alignItems "start" lets each card
-          keep its own height instead of stretching to match the taller one. */}
+      {/* The plan editor (first-time setup or Edit) takes the full width, with
+          the category table below it. Once the plan is saved, the summary and
+          the table sit side by side from lg (1024px) up; narrower than that,
+          each half would be too tight for its table, so they stack.
+          alignItems "start" lets each card keep its own height. */}
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            lg: isPlanExpanded ? "1fr" : "1fr 1fr",
+          },
           gap: 3,
           alignItems: "start",
         }}
       >
         {/* Uses the saved income, not the draft, so suggestions don't jump while typing. */}
-        <BudgetPlanner monthlyIncome={settings?.monthlyIncome ?? 0} />
+        <BudgetPlanner
+          monthlyIncome={settings?.monthlyIncome ?? 0}
+          onExpandedChange={setIsPlanExpanded}
+        />
 
         <CategoryBudgetTable />
       </Box>

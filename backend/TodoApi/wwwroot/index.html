@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Budget It First API</title>
+  <style>
+    :root {
+      --bg: #f6f8fa; --card: #ffffff; --text: #1f2933; --muted: #5f6b7a;
+      --accent: #0f766e; --border: #e3e8ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11161c; --card: #1a2129; --text: #e6edf3; --muted: #9aa7b4;
+        --accent: #2dd4bf; --border: #2a333d;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 680px; margin: 0 auto; padding: 48px 16px; }
+    h1 { margin: 0 0 4px; font-size: 2rem; }
+    h2 { font-size: 1.1rem; margin: 32px 0 12px; }
+    .lead { color: var(--muted); margin: 0 0 24px; }
+    .button {
+      display: inline-block; padding: 10px 20px; border-radius: 8px;
+      background: var(--accent); color: #fff; text-decoration: none; font-weight: 600;
+    }
+    @media (prefers-color-scheme: dark) { .button { color: #0b1f1d; } }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 24px;
+    }
+    ol { margin: 0; padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    li strong { display: block; }
+    li span, .note { color: var(--muted); }
+    .note { font-size: 0.9rem; margin-top: 32px; }
+    code { font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Budget It First</h1>
+    <p class="lead">
+      This is the server behind the Budget It First app. The app itself lives at
+      budgetitfirst.com.
+    </p>
+    <a class="button" href="https://budgetitfirst.com">Open the app</a>
+
+    <h2>How to use the app</h2>
+    <div class="card">
+      <ol>
+        <li><strong>Join</strong><span>Create a free account with your email or Google.</span></li>
+        <li><strong>Set your budget</strong><span>Enter your monthly income and plan your categories.</span></li>
+        <li><strong>Add shopping items</strong><span>List what you need to buy, with a category and estimated cost.</span></li>
+        <li><strong>Check off and log</strong><span>Tick items as you buy them and log what you actually paid.</span></li>
+        <li><strong>Track and adjust</strong><span>Watch what's left on the dashboard and calendar, get alerts, and adjust your plan anytime.</span></li>
+      </ol>
+    </div>
+
+    <p class="note">
+      For developers: endpoints are under <code>/api</code> and require a signed-in
+      Firebase token. <code>/api/health</code> shows whether the server and
+      database are up.
+    </p>
+  </main>
+</body>
+</html>

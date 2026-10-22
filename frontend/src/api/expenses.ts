@@ -1,6 +1,6 @@
 import { fetchWithAuth } from "./fetchWithAuth";
 import { getCurrentMonth, monthQuery, type BudgetMonth } from "../utils/month";
-import { parseISODate } from "../utils/dates";
+import { parseISODate, toISODate } from "../utils/dates";
 
 export interface Expense {
   id: number;
@@ -33,7 +33,15 @@ export async function fetchExpensesForMonth(
   if (!response.ok) {
     throw new Error("Failed to fetch spending");
   }
-  return response.json();
+  const expenses: Expense[] = await response.json();
+  // An API from before SpentOn existed doesn't send it (e.g. the web app
+  // deployed ahead of the server). Fall back to the day it was logged, in
+  // local time, so every screen can rely on spentOn being there.
+  return expenses.map((expense) =>
+    expense.spentOn
+      ? expense
+      : { ...expense, spentOn: toISODate(new Date(expense.createdAt)) },
+  );
 }
 
 // spentOn ("YYYY-MM-DD") dates it to a given day; without it, it's today.
