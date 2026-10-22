@@ -14,14 +14,24 @@ import {
 } from "@mui/material";
 import { fetchCategories } from "../api/categories";
 import { updateExpense, type Expense } from "../api/expenses";
+import { isSpendableDate } from "../utils/dates";
+import SpentOnField from "./SpentOnField";
 
 // Rendered with key={expense.id}, so each expense gets a fresh component and
 // the form state below starts from that expense. No effect needed to sync it.
-function EditSpendingDialog({ expense, onClose }: { expense: Expense; onClose: () => void }) {
+function EditSpendingDialog({
+  expense,
+  onClose,
+}: {
+  expense: Expense;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const [categoryId, setCategoryId] = useState(expense.categoryId);
   const [amount, setAmount] = useState(String(expense.amount));
   const [note, setNote] = useState(expense.note ?? "");
+  // Moving it to another day: only within this month, like adding.
+  const [spentOn, setSpentOn] = useState(expense.spentOn);
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
@@ -29,10 +39,18 @@ function EditSpendingDialog({ expense, onClose }: { expense: Expense; onClose: (
   });
 
   const parsedAmount = Number(amount);
-  const isAmountValid = amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const isAmountValid =
+    amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const canSave = isAmountValid && isSpendableDate(spentOn);
 
   const saveMutation = useMutation({
-    mutationFn: () => updateExpense(expense.id, { categoryId, amount: parsedAmount, note: note.trim() }),
+    mutationFn: () =>
+      updateExpense(expense.id, {
+        categoryId,
+        amount: parsedAmount,
+        note: note.trim(),
+        spentOn,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["spending"] });
@@ -42,7 +60,7 @@ function EditSpendingDialog({ expense, onClose }: { expense: Expense; onClose: (
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isAmountValid || saveMutation.isPending) return;
+    if (!canSave || saveMutation.isPending) return;
     saveMutation.mutate();
   }
 
@@ -72,11 +90,15 @@ function EditSpendingDialog({ expense, onClose }: { expense: Expense; onClose: (
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               error={!isAmountValid}
-              helperText={isAmountValid ? undefined : "Enter an amount above 0."}
+              helperText={
+                isAmountValid ? undefined : "Enter an amount above 0."
+              }
               autoFocus
               slotProps={{
                 input: {
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
                 },
                 htmlInput: { min: 0.01, step: "0.01" },
               }}
@@ -87,12 +109,19 @@ function EditSpendingDialog({ expense, onClose }: { expense: Expense; onClose: (
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
             />
-            {saveMutation.isError && <Alert severity="error">{saveMutation.error.message}</Alert>}
+            <SpentOnField value={spentOn} onChange={setSpentOn} />
+            {saveMutation.isError && (
+              <Alert severity="error">{saveMutation.error.message}</Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={!isAmountValid || saveMutation.isPending}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={!canSave || saveMutation.isPending}
+          >
             Save
           </Button>
         </DialogActions>
