@@ -23,3 +23,6 @@ docs/figma-budgetbetter.png
 docs/budgeting-plan.md
 notification-service-plan.md
 CLAUDE.md
+# Secrets (notification service / Kubernetes)
+**/firebase-service-account.json
+k8s/**/secret.yaml

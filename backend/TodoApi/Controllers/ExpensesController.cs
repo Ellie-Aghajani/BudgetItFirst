@@ -11,10 +11,14 @@ namespace TodoApi.Controllers;
 public class ExpensesController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IEventPublisher _events;
+    private readonly ILogger<ExpensesController> _logger;
 
-    public ExpensesController(AppDbContext context)
+    public ExpensesController(AppDbContext context, IEventPublisher events, ILogger<ExpensesController> logger)
     {
         _context = context;
+        _events = events;
+        _logger = logger;
     }
 
     private string? CurrentUserId => HttpContext.Items["UserId"] as string;
@@ -57,6 +61,7 @@ public class ExpensesController : ControllerBase
         var expense = Expense.Create(CurrentUserId, request.CategoryId, request.Amount, spentOn, request.Note);
         _context.Expenses.Add(expense);
         await _context.SaveChangesAsync();
+        await PublishSpendingChangedAsync(expense.CategoryId, expense.BudgetYear, expense.BudgetMonth);
         return CreatedAtAction(nameof(GetAll), new { id = expense.Id }, expense);
     }
 
@@ -86,6 +91,7 @@ public class ExpensesController : ControllerBase
             _context.Expenses.Add(Expense.CreateAdjustment(
                 CurrentUserId, request.CategoryId, difference, request.BudgetYear, request.BudgetMonth));
             await _context.SaveChangesAsync();
+            await PublishSpendingChangedAsync(request.CategoryId, request.BudgetYear, request.BudgetMonth);
         }
         return NoContent();
     }
@@ -111,6 +117,9 @@ public class ExpensesController : ControllerBase
             if (!BudgetMonths.IsNotInFuture(date)) return BadRequest("Spending can't be dated in the future.");
         }
 
+        // A note or date change doesn't change the category's total.
+        var spendingChanged = request.Amount != expense.Amount || request.CategoryId != expense.CategoryId;
+
         // Only call what changed, so UpdatedAt means something.
         if (request.Amount != expense.Amount) expense.UpdateAmount(request.Amount);
         var newNote = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
@@ -119,6 +128,10 @@ public class ExpensesController : ControllerBase
         if (request.SpentOn is { } newDate && newDate != expense.SpentOn) expense.MoveToDate(newDate);
 
         await _context.SaveChangesAsync();
+        // Only the new category: the old one's spending went down, and a
+        // decrease never triggers a notification (same reason Delete sends none).
+        if (spendingChanged)
+            await PublishSpendingChangedAsync(expense.CategoryId, expense.BudgetYear, expense.BudgetMonth);
         return Ok(expense);
     }
 
@@ -133,6 +146,41 @@ public class ExpensesController : ControllerBase
         _context.Expenses.Remove(expense);
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    // Tells the notification service the category's new total. Runs after
+    // SaveChanges and is best effort: the expense is already saved, so any
+    // failure here is logged and the request still succeeds.
+    private async Task PublishSpendingChangedAsync(int categoryId, int budgetYear, int budgetMonth)
+    {
+        if (!_events.IsEnabled) return;
+
+        try
+        {
+            var category = await _context.Categories
+                .Where(c => c.Id == categoryId && c.UserId == CurrentUserId && !c.IsArchived)
+                .Select(c => new { c.Name, c.Budget })
+                .FirstOrDefaultAsync();
+            if (category == null || category.Budget <= 0) return;
+
+            // One SUM in SQL, not every expense loaded into memory. Filters by
+            // UserId too, even though the category check above already proves
+            // ownership (defense in depth).
+            var spent = await _context.Expenses
+                .Where(e => e.UserId == CurrentUserId
+                    && e.CategoryId == categoryId
+                    && e.BudgetYear == budgetYear
+                    && e.BudgetMonth == budgetMonth)
+                .SumAsync(e => (decimal?)e.Amount) ?? 0;
+
+            var evt = ExpenseChangedEvent.Create(
+                CurrentUserId!, categoryId, category.Name, category.Budget, spent, budgetYear, budgetMonth);
+            if (evt != null) await _events.PublishAsync(evt);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not send the spending event for category {CategoryId}.", categoryId);
+        }
     }
 
     // Checks ownership too: without it, a user could log spending against
