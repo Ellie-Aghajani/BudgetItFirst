@@ -21,4 +21,5 @@ backend/TodoApi/appsettings.Production.json
 
 docs/figma-budgetbetter.png
 docs/budgeting-plan.md
+notification-service-plan.md
 CLAUDE.md
