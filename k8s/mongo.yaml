@@ -1,0 +1,86 @@
+# Single-replica MongoDB for the local demo only. Not production-grade:
+# in production use a managed service (MongoDB Atlas).
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+spec:
+  # Headless: DNS "mongo" points straight at the pod. A StatefulSet needs one
+  # for its stable network identity (mongo-0.mongo).
+  clusterIP: None
+  selector:
+    app: mongo
+  ports:
+    - name: mongo
+      port: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        # The image's "mongodb" user. fsGroup makes the volume writable for it.
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mongo
+          image: mongo:8.0
+          # Mongo sizes its cache from the machine's RAM, not the container
+          # limit, and would get OOM-killed. Keep it well under the limit.
+          args: ["--wiredTigerCacheSizeGB", "0.25"]
+          ports:
+            - name: mongo
+              containerPort: 27017
+          # A TCP check is cheap; running mongosh every few seconds is not.
+          startupProbe:
+            tcpSocket:
+              port: mongo
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            tcpSocket:
+              port: mongo
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: mongo
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+  # kind ships a default StorageClass, so this PVC gets a volume automatically.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

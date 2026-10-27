@@ -1,0 +1,12 @@
+# Apply everything with: kubectl apply -k k8s/
+# The Secret is NOT listed here: scripts/kind-up.sh creates it from your local .env,
+# so no credentials are ever stored in git. See secret.example.yaml for its shape.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: budget
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - mongo.yaml
+  - rabbitmq.yaml
+  - notification-service.yaml

@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  # Two replicas read the same queue (competing consumers). Safe because the
+  # consumer is idempotent: the unique index stops duplicate notifications.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Start the new pod before stopping an old one: no downtime on deploy.
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      automountServiceAccountToken: false
+      # main.ts forces an exit after 10 s, well inside this window.
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        # The image says USER node (a name). runAsNonRoot can only check a
+        # number, so give the node user's uid explicitly.
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: notification-service
+          # Built locally and loaded with "kind load docker-image".
+          # IfNotPresent + a fixed tag: Kubernetes uses the loaded image instead
+          # of trying to pull from Docker Hub (":latest" would always pull).
+          image: notification-service:dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: notification-config
+          env:
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: RABBITMQ_PASSWORD
+            # $(VAR) uses the two variables above, so the password is stored
+            # only once, in the Secret.
+            - name: RABBITMQ_URI
+              value: amqp://$(RABBITMQ_USER):$(RABBITMQ_PASSWORD)@rabbitmq:5672
+            - name: DEV_USER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: DEV_USER_ID
+          ports:
+            - name: http
+              containerPort: 8080
+          # Startup: gives the process time to boot before liveness starts.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            failureThreshold: 15
+          # Liveness only asks "is the process alive?" and never checks Mongo
+          # or RabbitMQ. Otherwise a Mongo outage would restart every pod.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness checks the dependencies. When it fails the pod is taken
+          # out of the Service (no traffic) but is NOT restarted.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
