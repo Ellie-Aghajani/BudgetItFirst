@@ -1,0 +1,36 @@
+{
+  "name": "notification-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turns ExpenseChanged events into budget notifications (80% / 100%).",
+  "main": "dist/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "dev": "tsx watch --env-file=.env src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "amqplib": "^2.2.0",
+    "express": "^5.3.0",
+    "firebase-admin": "^14.5.0",
+    "mongoose": "^9.11.4",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  }
+}

@@ -77,6 +77,19 @@ public class EventPublisherTests
         await publisher.PublishAsync(SampleEvent(), cancelled.Token);
     }
 
+    // CloudAMQP gives an amqps:// URI. The client must turn TLS on from the
+    // scheme alone, since we only pass the Uri (no separate TLS settings).
+    [Fact]
+    public void AmqpsUri_TurnsOnTls()
+    {
+        var factory = new RabbitMQ.Client.ConnectionFactory { Uri = new Uri("amqps://user:pass@example.cloudamqp.com/vhost") };
+
+        Assert.True(factory.Ssl.Enabled);
+        Assert.Equal("example.cloudamqp.com", factory.Ssl.ServerName);
+        Assert.Equal(5671, factory.Port);
+        Assert.Equal("vhost", factory.VirtualHost);
+    }
+
     [Fact]
     public void RabbitMq_DoesNotConnectInTheConstructor()
     {

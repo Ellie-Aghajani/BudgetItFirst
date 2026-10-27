@@ -1,0 +1,54 @@
+# Local development stack: RabbitMQ + MongoDB + notification-service.
+# Usage: cp .env.example .env && docker compose up --build
+# Ports are bound to 127.0.0.1 so they are not reachable from your network.
+services:
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    environment:
+      # The default "guest" user only works from localhost, not from another container.
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5672:5672"   # AMQP (the .NET API publishes here)
+      - "127.0.0.1:15672:15672" # Management UI: http://localhost:15672
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  mongo:
+    image: mongo:8.0
+    ports:
+      # 27018 on the host: avoids a clash with a locally installed MongoDB.
+      - "127.0.0.1:27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  notification-service:
+    build: ./services/notification-service
+    environment:
+      NODE_ENV: development
+      PORT: "8080"
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: notifications
+      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      AUTH_MODE: dev
+      DEV_USER_ID: ${DEV_USER_ID:-dev-user}
+    ports:
+      - "127.0.0.1:8081:8080"
+    # Only for a tidy first start. The service retries its connections anyway,
+    # because Kubernetes gives no start-order guarantee.
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
