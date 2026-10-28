@@ -22,4 +22,8 @@ backend/TodoApi/appsettings.Production.json
 docs/figma-budgetbetter.png
 docs/budgeting-plan.md
 notification-service-plan.md
+phase5-go-live.md
 CLAUDE.md
+# Secrets (notification service / Kubernetes)
+**/firebase-service-account.json
+k8s/**/secret.yaml

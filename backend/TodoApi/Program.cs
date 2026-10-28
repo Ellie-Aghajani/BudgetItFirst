@@ -58,6 +58,25 @@ builder.Services.AddOpenApi();
 builder.Services.AddSingleton<IActivityLogger, TodoActivityLogger>();
 builder.Services.AddScoped<RequestAuditor>();
 
+// Events for the notification service. Off by default: production (Render)
+// has no RabbitMQ, so it gets the no-op publisher and behaves as before.
+// A typo in the config fails at startup instead of silently sending nothing.
+var eventOptions = builder.Configuration.GetSection(EventOptions.SectionName).Get<EventOptions>() ?? new EventOptions();
+switch (eventOptions.Provider.ToLowerInvariant())
+{
+    case "none":
+        builder.Services.AddSingleton<IEventPublisher, NoOpEventPublisher>();
+        break;
+    case "rabbitmq":
+        if (string.IsNullOrWhiteSpace(eventOptions.RabbitMq.Uri))
+            throw new InvalidOperationException("Events:RabbitMq:Uri is required when Events:Provider is \"rabbitmq\".");
+        builder.Services.AddSingleton(eventOptions.RabbitMq);
+        builder.Services.AddSingleton<IEventPublisher, RabbitMqEventPublisher>();
+        break;
+    default:
+        throw new InvalidOperationException($"Unknown Events:Provider \"{eventOptions.Provider}\". Use \"none\" or \"rabbitmq\".");
+}
+
 var app = builder.Build();
 app.UseCors("AllowFrontendDev");
 // "/" shows wwwroot/index.html: what this server is and how to use the app.

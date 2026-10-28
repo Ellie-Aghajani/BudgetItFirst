@@ -1,0 +1,11 @@
+{
+  // Compiles only src/ to dist/ (what the Docker image runs).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": true
+  },
+  "include": ["src"]
+}

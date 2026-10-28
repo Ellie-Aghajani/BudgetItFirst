@@ -75,6 +75,8 @@ interface UiState {
   activeView: View;
   // A category picked on the chart, highlighted in the Budget vs Spent table.
   highlightedCategoryId: number | null;
+  // Month shown on Reports, "2026-10" style. null = the newest month.
+  reportsMonthKey: string | null;
   // Set when another screen asks the Budget page to open the plan editor
   // (the shopping list's "+ Add category"). The planner clears it once read.
   planEditorRequest: "shoppingList" | null;
@@ -99,6 +101,7 @@ const initialState: UiState = {
   isSidebarOpen: false,
   activeView: "dashboard",
   highlightedCategoryId: null,
+  reportsMonthKey: null,
   planEditorRequest: null,
   spendPrompt: null,
   spendingDraft: null,
@@ -160,9 +163,25 @@ const uiSlice = createSlice({
       state.activeView = action.payload;
       // A highlight belongs to the screen it was made on.
       state.highlightedCategoryId = null;
+      state.reportsMonthKey = null;
     },
     setHighlightedCategoryId: (state, action: PayloadAction<number | null>) => {
       state.highlightedCategoryId = action.payload;
+    },
+    setReportsMonthKey: (state, action: PayloadAction<string | null>) => {
+      state.reportsMonthKey = action.payload;
+    },
+    // A budget alert was clicked: Reports, on the alert's month, with the
+    // category's row highlighted.
+    openCategoryReport: (
+      state,
+      action: PayloadAction<{ categoryId: number; year: number; month: number }>,
+    ) => {
+      const { categoryId, year, month } = action.payload;
+      state.activeView = "reports";
+      state.highlightedCategoryId = categoryId;
+      state.reportsMonthKey = `${year}-${month}`;
+      state.isSidebarOpen = false;
     },
     openPlanEditor: (state) => {
       state.activeView = "budget";
@@ -263,6 +282,7 @@ const uiSlice = createSlice({
     resetLocalData: (state) => {
       state.selectedCategoryId = null;
       state.highlightedCategoryId = null;
+      state.reportsMonthKey = null;
       state.spendPrompt = null;
       state.spendingDraft = null;
       state.unloggedTodoIds = [];
@@ -292,6 +312,8 @@ export const {
   closeSidebar,
   setActiveView,
   setHighlightedCategoryId,
+  setReportsMonthKey,
+  openCategoryReport,
   openPlanEditor,
   clearPlanEditorRequest,
   promptSpending,

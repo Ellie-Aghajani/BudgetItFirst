@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Box,
@@ -22,15 +22,18 @@ import { fetchMonths } from "../api/months";
 import { fetchSpending } from "../api/spending";
 import { formatCurrency } from "../utils/currency";
 import { formatMonth, getCurrentMonth } from "../utils/month";
-import { useAppSelector } from "../store/hooks";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { setReportsMonthKey } from "../store/uiSlice";
 import Header from "./Header";
 import BudgetSummaryTiles from "./BudgetSummaryTiles";
 import SpendingBreakdown from "./SpendingBreakdown";
 
 function ReportsScreen() {
   const currentMonth = getCurrentMonth();
+  const dispatch = useAppDispatch();
   // "2026-10" style key; null means "the newest month" (the current one).
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  // In the store, so a budget alert can open Reports on its own month.
+  const selectedKey = useAppSelector((state) => state.ui.reportsMonthKey);
   const highlightedId = useAppSelector((state) => state.ui.highlightedCategoryId);
   // Table rows by category id, so a pick on the chart can scroll to its row.
   const rowRefs = useRef(new Map<number, HTMLTableRowElement>());
@@ -82,7 +85,7 @@ function ReportsScreen() {
             <Select
               size="small"
               value={`${selected.year}-${selected.month}`}
-              onChange={(e) => setSelectedKey(e.target.value)}
+              onChange={(e) => dispatch(setReportsMonthKey(e.target.value))}
               aria-label="Month"
               sx={{ minWidth: 180 }}
             >

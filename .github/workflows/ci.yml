@@ -1,0 +1,127 @@
+# CI for the notification-service work: Node service, .NET API, Kubernetes
+# manifests, and the service's Docker image.
+# Images are pushed to GHCR only from main, never from pull requests.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch or PR cancels the run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: every job can only read the repo, unless it asks for more.
+permissions:
+  contents: read
+
+# Third-party actions are pinned to a full commit SHA, not a tag. A tag can be
+# moved to different code later; a SHA cannot (supply-chain protection).
+jobs:
+  node:
+    name: Node service (lint, typecheck, test)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: services/notification-service
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22 # same as the Dockerfile
+          cache: npm
+          cache-dependency-path: services/notification-service/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  dotnet:
+    name: .NET API (build, test)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build backend/TodoApi.slnx --configuration Release
+      - run: dotnet test backend/TodoApi.slnx --configuration Release --no-build
+
+  k8s:
+    name: Kubernetes manifests (kubeconform)
+    runs-on: ubuntu-24.04
+    env:
+      KUBECONFORM_VERSION: v0.8.0
+      # From the release's CHECKSUMS file. If the download is ever changed,
+      # the check fails instead of running unknown code.
+      KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+      # Same version as the kind cluster that scripts/kind-up.sh creates.
+      KUBERNETES_VERSION: 1.37.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install kubeconform
+        run: |
+          curl -sSfL -o kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum --check
+          tar -xzf kubeconform.tar.gz kubeconform
+      # Validate exactly what "kubectl apply -k k8s/" would send, plus the
+      # Secret example that the script uses instead.
+      - name: Validate manifests
+        run: |
+          kubectl kustomize k8s/ > rendered.yaml
+          ./kubeconform -strict -summary -kubernetes-version "${KUBERNETES_VERSION}" \
+            rendered.yaml k8s/secret.example.yaml
+
+  docker:
+    name: Docker image (build; push on main)
+    # Only build an image from code that passed every check.
+    needs: [node, dotnet, k8s]
+    runs-on: ubuntu-24.04
+    # The only job that may write to GitHub Packages (GHCR).
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # GHCR names must be lowercase.
+      IMAGE: ghcr.io/ellie-aghajani/notification-service
+      PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Log in to GHCR
+        if: env.PUSH == 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # Short-lived token GitHub creates for this run. No secret to manage.
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          # sha-<commit>: points at exactly one build. latest: newest main.
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/notification-service
+          push: ${{ env.PUSH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Reuse unchanged layers (like npm ci) from earlier runs.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

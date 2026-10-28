@@ -34,6 +34,7 @@ import { setFilter, closeSidebar, setActiveView } from "../store/uiSlice";
 import type { Filter } from "../store/uiSlice";
 import { signOutUser } from "../api/auth";
 import AccountSettings from "./AccountSettings";
+import NotificationBell from "./NotificationBell";
 
 const DRAWER_WIDTH = 260;
 
@@ -84,9 +85,13 @@ function Sidebar() {
       <Box sx={{ padding: 3 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <ChecklistIcon color="primary" />
-          <Typography variant="h2" sx={{ textTransform: "none" }}>
+          <Typography variant="h2" sx={{ textTransform: "none", flex: 1 }}>
             Budget It First
           </Typography>
+          {/* Below md the navbar has the bell, so don't show it twice. */}
+          <Box sx={{ display: { xs: "none", md: "block" } }}>
+            <NotificationBell />
+          </Box>
         </Stack>
       </Box>
 

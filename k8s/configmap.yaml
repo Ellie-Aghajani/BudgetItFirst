@@ -1,0 +1,18 @@
+# Non-secret settings for the notification service. Same variable names as
+# docker-compose.yml and src/config.ts.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-config
+data:
+  # The image defaults to production, but AUTH_MODE=dev is refused there.
+  # This cluster is a local demo, so it runs in development mode.
+  NODE_ENV: development
+  AUTH_MODE: dev
+  LOG_LEVEL: info
+  PORT: "8080"
+  # "mongo" is the Service name; cluster DNS resolves it inside the namespace.
+  # No Mongo auth: the database is only reachable inside the cluster (demo only).
+  MONGODB_URI: mongodb://mongo:27017
+  MONGODB_DB: notifications
+  FIREBASE_PROJECT_ID: todo-85812
