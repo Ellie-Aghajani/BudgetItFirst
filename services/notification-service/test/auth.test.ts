@@ -36,6 +36,19 @@ describe("loadConfig", () => {
     expect(loadConfig(baseEnv).PORT).toBe(8080);
   });
 
+  it("reads CORS_ORIGINS as a comma-separated list of https origins", () => {
+    expect(loadConfig({ ...baseEnv, CORS_ORIGINS: "https://a.com, https://b.com" }).CORS_ORIGINS).toEqual([
+      "https://a.com",
+      "https://b.com",
+    ]);
+    expect(loadConfig(baseEnv).CORS_ORIGINS).toContain("https://www.budgetitfirst.com");
+  });
+
+  it("rejects a CORS origin with a path or without https", () => {
+    expect(() => loadConfig({ ...baseEnv, CORS_ORIGINS: "https://a.com/" })).toThrow(/CORS_ORIGINS/);
+    expect(() => loadConfig({ ...baseEnv, CORS_ORIGINS: "http://a.com" })).toThrow(/CORS_ORIGINS/);
+  });
+
   it("names the missing variable but never prints values", () => {
     expect(() => loadConfig({ RABBITMQ_URI: "amqp://user:secret@host" })).toThrow(/MONGODB_URI/);
     expect(() => loadConfig({ RABBITMQ_URI: "amqp://user:secret@host" })).not.toThrow(/secret/);

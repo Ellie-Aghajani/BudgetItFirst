@@ -23,6 +23,16 @@ const schema = z
     // Optional: verifying ID tokens only needs the project id (Google's public
     // keys are fetched automatically). Set it only if you need admin features.
     FIREBASE_CREDENTIALS_JSON: z.string().min(1).optional(),
+    // Browser origins allowed to call the API (CORS), comma-separated. Same
+    // sites as the .NET API. http://localhost on any port is always allowed
+    // too: that's Vite in development and the Electron app.
+    CORS_ORIGINS: z
+      .string()
+      .default("https://www.budgetitfirst.com,https://budgetitfirst.com,https://todo-fullstack-electron.vercel.app")
+      .transform((s) => s.split(",").map((o) => o.trim()).filter(Boolean))
+      .pipe(z.array(z.string().regex(/^https:\/\/[^/]+$/, "each origin must look like https://host (no path)"))),
+    // Requests per user per minute on /notifications.
+    RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
   })
   .refine((c) => !(c.AUTH_MODE === "dev" && c.NODE_ENV === "production"), {
     message: "AUTH_MODE=dev is not allowed when NODE_ENV=production",

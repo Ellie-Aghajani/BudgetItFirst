@@ -5,6 +5,7 @@ import HomeIcon from "@mui/icons-material/Home";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { toggleSidebar, setActiveView } from "../store/uiSlice";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBell from "./NotificationBell";
 import { SIDEBAR_BG } from "../theme";
 
 // Stands in for the permanent sidebar below the "md" breakpoint (900px),
@@ -57,6 +58,7 @@ function MobileNavbar() {
         >
           <HomeIcon />
         </IconButton>
+        <NotificationBell />
         <ThemeToggle label="Dark" />
       </Toolbar>
     </AppBar>

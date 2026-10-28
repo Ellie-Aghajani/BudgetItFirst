@@ -11,6 +11,9 @@ const notificationSchema = new Schema(
     budgetMonth: { type: Number, required: true },
     message: { type: String, required: true },
     readAt: { type: Date, default: null },
+    // Soft delete: the user removed it from their list. The document stays,
+    // so the unique index below still stops the same alert from coming back.
+    dismissedAt: { type: Date, default: null },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
@@ -21,6 +24,7 @@ const notificationSchema = new Schema(
         ret.id = String(ret._id);
         delete ret._id;
         delete ret.userId;
+        delete ret.dismissedAt;
         return ret;
       },
     },
@@ -38,7 +42,7 @@ notificationSchema.index(
 // For GET /notifications: a user's newest notifications, optionally unread only.
 notificationSchema.index({ userId: 1, readAt: 1, createdAt: -1 }, { name: "by_user_newest" });
 
-export type NotificationFields = Omit<InferSchemaType<typeof notificationSchema>, "readAt" | "createdAt">;
+export type NotificationFields = Omit<InferSchemaType<typeof notificationSchema>, "readAt" | "dismissedAt" | "createdAt">;
 
 export const Notification = model("Notification", notificationSchema);
 

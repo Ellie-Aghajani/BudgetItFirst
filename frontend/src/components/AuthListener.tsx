@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebase";
 import { useAppDispatch } from "../store/hooks";
@@ -6,6 +7,7 @@ import { setUser, clearUser } from "../store/authSlice";
 
 function AuthListener({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Fires immediately with the current state, then again every time
@@ -15,6 +17,9 @@ function AuthListener({ children }: { children: React.ReactNode }) {
         dispatch(setUser({ uid: user.uid, email: user.email, displayName: user.displayName }));
       } else {
         dispatch(clearUser());
+        // Signed out: drop cached notifications, so the next person on this
+        // device never sees them.
+        queryClient.removeQueries({ queryKey: ["notifications"] });
       }
     });
 
@@ -22,7 +27,7 @@ function AuthListener({ children }: { children: React.ReactNode }) {
     // stop listening when this component unmounts, so Firebase doesn't
     // keep calling dispatch on a component tree that no longer exists.
     return () => unsubscribe();
-  }, [dispatch]);
+  }, [dispatch, queryClient]);
 
   return <>{children}</>;
 }

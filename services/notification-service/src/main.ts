@@ -23,6 +23,8 @@ async function main() {
     verify: createVerifier(config, log),
     isReady: () => mongoose.connection.readyState === mongoose.ConnectionStates.connected && consumer.isConnected(),
     log,
+    corsOrigins: config.CORS_ORIGINS,
+    rateLimitPerMinute: config.RATE_LIMIT_PER_MINUTE,
   });
 
   // HTTP starts first, so /healthz answers while dependencies are still connecting.
