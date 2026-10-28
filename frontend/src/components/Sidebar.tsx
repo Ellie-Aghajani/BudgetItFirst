@@ -36,7 +36,8 @@ import { signOutUser } from "../api/auth";
 import AccountSettings from "./AccountSettings";
 import NotificationBell from "./NotificationBell";
 
-const DRAWER_WIDTH = 260;
+// Wide enough for the title and the bell on one row.
+const DRAWER_WIDTH = 320;
 
 function Sidebar() {
   const dispatch = useAppDispatch();
@@ -85,7 +86,7 @@ function Sidebar() {
       <Box sx={{ padding: 3 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <ChecklistIcon color="primary" />
-          <Typography variant="h2" sx={{ textTransform: "none", flex: 1 }}>
+          <Typography variant="h2" noWrap sx={{ textTransform: "none", flex: 1 }}>
             Budget It First
           </Typography>
           {/* Below md the navbar has the bell, so don't show it twice. */}
@@ -238,6 +239,7 @@ function Sidebar() {
           display: { xs: "block", md: "none" },
           "& .MuiDrawer-paper": {
             width: DRAWER_WIDTH,
+            maxWidth: "85vw",
             boxSizing: "border-box",
             display: "flex",
             flexDirection: "column",
